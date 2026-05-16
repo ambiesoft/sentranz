@@ -1,22 +1,74 @@
 import { invoke } from "@tauri-apps/api/core";
 
-let greetInputEl: HTMLInputElement | null;
-let greetMsgEl: HTMLElement | null;
+type SentenceAnalysis = {
+  sentence: string;
+  translation: string;
+  summary: string;
+};
 
-async function greet() {
-  if (greetMsgEl && greetInputEl) {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsgEl.textContent = await invoke("greet", {
-      name: greetInputEl.value,
-    });
+const inputEl =
+  document.querySelector<HTMLTextAreaElement>("#inputText")!;
+
+const buttonEl =
+  document.querySelector<HTMLButtonElement>("#analyzeBtn")!;
+
+const resultsEl =
+  document.querySelector<HTMLDivElement>("#results")!;
+
+buttonEl.addEventListener("click", async () => {
+
+  const text = inputEl.value;
+
+  resultsEl.innerHTML = "Loading...";
+
+  try {
+
+    const result = await invoke<SentenceAnalysis[]>(
+      "analyze_text",
+      { text }
+    );
+
+    renderResults(result);
+
+  } catch (err) {
+
+    resultsEl.innerHTML =
+      `<pre>${String(err)}</pre>`;
+  }
+});
+
+function renderResults(results: SentenceAnalysis[]) {
+
+  resultsEl.innerHTML = "";
+
+  for (const item of results) {
+
+    const div = document.createElement("div");
+
+    div.className = "sentence-card";
+
+    div.innerHTML = `
+      <div class="sentence">
+        ${escapeHtml(item.sentence)}
+      </div>
+
+      <div class="translation">
+        ${escapeHtml(item.translation)}
+      </div>
+
+      <div class="summary">
+        ${escapeHtml(item.summary)}
+      </div>
+    `;
+
+    resultsEl.appendChild(div);
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  greetInputEl = document.querySelector("#greet-input");
-  greetMsgEl = document.querySelector("#greet-msg");
-  document.querySelector("#greet-form")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    greet();
-  });
-});
+function escapeHtml(s: string): string {
+
+return s
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;");
+}
