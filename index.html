@@ -2,12 +2,7 @@
   <div id="app">
     <h1>Sentranz</h1>
 
-    <textarea
-      id="inputText"
-      rows="10"
-      cols="80"
-      placeholder="Paste text here..."
-    ></textarea>
+    <textarea id="inputText" rows="10" cols="80" placeholder="Paste text here..."></textarea>
 
     <br />
 
@@ -15,6 +10,55 @@
 
     <div id="results"></div>
   </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div id="ask-modal" class="modal hidden">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <span>Ask AI</span>
+
+        <button id="close-modal">
+          ×
+        </button>
+      </div>
+
+      <div id="modal-sentence" class="modal-sentence">
+      </div>
+
+      <textarea id="question-input" placeholder="Ask about this sentence..."></textarea>
+
+      <button id="send-question">
+        Send
+      </button>
+
+      <div id="answer-area"></div>
+
+    </div>
+  </div>
+
+
+
+
+
+
 
   <script type="module" src="/src/main.ts"></script>
 </body>

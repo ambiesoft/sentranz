@@ -1,27 +1,97 @@
 body {
   font-family: sans-serif;
-  margin: 20px;
+  margin: 0;
+  padding: 16px;
+  background: #f3f3f3;
+  max-width: 900px;
+  margin: auto;
 }
 
-textarea {
-  width: 100%;
+#results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .sentence-card {
-  border: 1px solid #ccc;
-  padding: 12px;
-  margin-top: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.sentence {
+.original {
+  font-size: 18px;
   font-weight: bold;
+  margin-bottom: 12px;
 }
 
 .translation {
-  margin-top: 8px;
+  color: #333;
+  margin-bottom: 12px;
 }
 
 .summary {
-  margin-top: 8px;
   color: #666;
+  font-size: 14px;
+}
+
+.ask-button {
+  margin-top: 12px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.4);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: 700px;
+  max-width: 90vw;
+
+  background: white;
+
+  border-radius: 16px;
+
+  padding: 20px;
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 16px;
+}
+
+.modal-sentence {
+  margin-bottom: 16px;
+
+  font-weight: bold;
+}
+
+#question-input {
+  width: 100%;
+  height: 120px;
+
+  margin-bottom: 16px;
+}
+
+#answer-area {
+  margin-top: 20px;
+
+  white-space: pre-wrap;
 }
