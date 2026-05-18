@@ -52,14 +52,9 @@ function renderResults(results: SentenceResult[]) {
   }
 }  // renderResults()
 
-const inputEl =
-  document.querySelector<HTMLTextAreaElement>("#inputText")!;
-
-const buttonEl =
-  document.querySelector<HTMLButtonElement>("#analyzeBtn")!;
-
-const resultsEl =
-  document.querySelector<HTMLDivElement>("#results")!;
+const inputEl =  document.querySelector<HTMLTextAreaElement>("#inputText")!;
+const buttonEl =  document.querySelector<HTMLButtonElement>("#analyzeBtn")!;
+const resultsEl =  document.querySelector<HTMLDivElement>("#results")!;
 
 buttonEl.addEventListener("click", async () => {
   const text = inputEl.value;
