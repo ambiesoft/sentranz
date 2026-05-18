@@ -1,64 +1,39 @@
 <body>
-  <div id="app">
-    <h1>Sentranz</h1>
+  <div class="main-layout">
+    <header class="topbar">
+      <h1>Sentranz</h1>
+    </header>
 
-    <textarea id="inputText" rows="10" cols="80" placeholder="Paste text here..."></textarea>
+    <main class="main-content">
+      <section class="input-section">
+        <h2>Input</h2>
 
-    <br />
+        <textarea id="inputText" placeholder="Paste text here..."></textarea>
+      </section>
 
-    <button id="analyzeBtn">Analyze</button>
+      <section class="split-section">
+        <div class="section-header">
+          <h2>Sentences</h2>
 
-    <div id="results"></div>
+          <button id="splitBtn">Split Sentences</button>
+        </div>
+
+        <textarea id="sentenceList" readonly></textarea>
+      </section>
+
+      <section class="action-section">
+        <button id="analyzeBtn">Open Analysis Window</button>
+
+        <div id="loadingArea"></div>
+      </section>
+
+      <section class="results-section">
+        <h2>Analysis Progress</h2>
+
+        <div id="results"></div>
+      </section>
+    </main>
   </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  <div id="ask-modal" class="modal hidden">
-
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <span>Ask AI</span>
-
-        <button id="close-modal">
-          ×
-        </button>
-      </div>
-
-      <div id="modal-sentence" class="modal-sentence">
-      </div>
-
-      <textarea id="question-input" placeholder="Ask about this sentence..."></textarea>
-
-      <button id="send-question">
-        Send
-      </button>
-
-      <div id="answer-area"></div>
-
-    </div>
-  </div>
-
-
-
-
-
-
 
   <script type="module" src="/src/main.ts"></script>
 </body>

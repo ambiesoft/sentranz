@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Analysis</title>
+  </head>
+
+  <body>
+    <div class="layout">
+      <div class="toolbar">
+        <button id="prev-btn">Prev</button>
+
+        <button id="next-btn">Next</button>
+
+        <select id="sentence-select"></select>
+      </div>
+
+      <div class="content">
+        <div class="tree-pane">Tree</div>
+
+        <div class="right-pane">
+          <div id="sentence-pane" class="sentence-pane"></div>
+
+          <div id="word-info" class="word-info"></div>
+
+          <div class="ask-pane">
+            <div id="ask-answer"></div>
+            <textarea id="ask-input" placeholder="Ask AI..."></textarea>
+
+            <button id="ask-btn">Ask</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/analysis.ts"></script>
+  </body>
+</html>

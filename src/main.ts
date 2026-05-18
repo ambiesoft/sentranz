@@ -1,144 +1,59 @@
-import { invoke } from "@tauri-apps/api/core";
-import "./styles.css";
+console.log('main.ts loaded');
 
-type SentenceResult = {
-  original: string;
-  translation: string;
-  summary: string;
-};
+import './styles.css';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
-function renderResults(results: SentenceResult[]) {
+const inputEl = document.querySelector<HTMLTextAreaElement>('#inputText')!;
+const splitBtn = document.querySelector<HTMLButtonElement>('#splitBtn')!;
+const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyzeBtn')!;
+const sentenceListEl =
+  document.querySelector<HTMLTextAreaElement>('#sentenceList')!;
+const resultsEl = document.querySelector<HTMLDivElement>('#results')!;
 
-  const container =
-    document.querySelector("#results");
+let currentSentences: string[] = [];
 
-  if (!container) return;
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
 
-  container.innerHTML = "";
-
-  for (const item of results) {
-
-    const card = document.createElement("div");
-    card.className = "sentence-card";
-
-    card.innerHTML = `
-      <div class="original">
-        ${escapeHtml(item.original)}
-      </div>
-
-      <div class="translation">
-        ${escapeHtml(item.translation)}
-      </div>
-
-      <div class="summary">
-        ${escapeHtml(item.summary)}
-      </div>
-
-      <button class="ask-button">
-        Ask AI
-      </button>
-    `;
-
-    const askButton =
-      card.querySelector(".ask-button");
-
-    askButton?.addEventListener(
-      "click",
-      () => {
-        openAskModal(item.original);
-      }
-    );
-    container.appendChild(card);
-  }
-}  // renderResults()
-
-const inputEl =  document.querySelector<HTMLTextAreaElement>("#inputText")!;
-const buttonEl =  document.querySelector<HTMLButtonElement>("#analyzeBtn")!;
-const resultsEl =  document.querySelector<HTMLDivElement>("#results")!;
-
-buttonEl.addEventListener("click", async () => {
+splitBtn.addEventListener('click', () => {
   const text = inputEl.value;
-  resultsEl.innerHTML = "Loading...";
-  try {
-    const result = await invoke<SentenceResult[]>(
-      "analyze_text",
-      { text }
-    );
-    renderResults(result);
-  } catch (err) {
-    resultsEl.innerHTML =
-      `<pre>${String(err)}</pre>`;
-  }
-});  // click event listener
+  currentSentences = splitSentences(text);
+  sentenceListEl.value = currentSentences.join('\n\n');
+});
 
+analyzeBtn.addEventListener('click', async () => {
+  const text = inputEl.value;
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+  const sentences = splitSentences(text);
 
-const modal = document.querySelector("#ask-modal");
-const modalSentence = document.querySelector("#modal-sentence");
-const questionInput = document.querySelector("#question-input") as HTMLTextAreaElement;
-const answerArea = document.querySelector("#answer-area");
-const closeModalButton = document.querySelector("#close-modal");
+  await invoke('open_analysis_window', { sentences });
+});
 
-let currentSentence = "";
-function openAskModal(sentence: string) {
+listen('analysis_finished', () => {
+  const div = document.createElement('div');
 
-  currentSentence = sentence;
+  div.className = 'analysis-finished';
 
-  if (modalSentence) {
-    modalSentence.textContent = sentence;
-  }
+  div.textContent = 'Analysis finished.';
 
-  if (answerArea) {
-    answerArea.textContent = "";
-  }
+  resultsEl.appendChild(div);
+});
 
-  questionInput.value = "";
+// function appendProgress(result: SentenceResult) {
+//   const div = document.createElement('div');
 
-  modal?.classList.remove("hidden");
-}
+//   div.className = 'progress-item';
 
-closeModalButton?.addEventListener(
-  "click",
-  () => {
-    modal?.classList.add("hidden");
-  }
-);
+//   div.textContent = `✓ ${result.original}`;
 
-const sendButton =
-  document.querySelector("#send-question");
+//   resultsEl.appendChild(div);
+// }
 
-sendButton?.addEventListener(
-  "click",
-  async () => {
-
-    const question = questionInput.value;
-    if (answerArea) {
-      answerArea.textContent = "Thinking...";
-    }
-
-    try {
-      const response = await invoke<string>(
-        "ask_ai",
-        {
-          sentence: currentSentence,
-          question,
-        }
-      );
-
-      if (answerArea) {
-        answerArea.textContent = response;
-      }
-
-    } catch (e) {
-      if (answerArea) {
-        answerArea.textContent = String(e);
-      }
-    }
-  }
-);
+// function escapeHtml(s: string): string {
+//   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// }

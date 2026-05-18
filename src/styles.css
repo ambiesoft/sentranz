@@ -1,97 +1,77 @@
 body {
-  font-family: sans-serif;
   margin: 0;
-  padding: 16px;
-  background: #f3f3f3;
-  max-width: 900px;
-  margin: auto;
+
+  font-family: sans-serif;
+}
+
+.main-layout {
+  display: grid;
+
+  grid-template-rows:
+    60px 1fr;
+
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+
+  padding: 0 20px;
+
+  border-bottom:
+    1px solid #ccc;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+
+  gap: 20px;
+
+  padding: 20px;
+
+  overflow: auto;
+}
+
+.input-section,
+.split-section,
+.results-section {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+#inputText,
+#sentenceList {
+  width: 100%;
+
+  min-height: 180px;
+
+  font-size: 16px;
+}
+
+.section-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+}
+
+.action-section {
+  display: flex;
+
+  align-items: center;
+
+  gap: 16px;
 }
 
 #results {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
 
-.sentence-card {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.original {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-
-.translation {
-  color: #333;
-  margin-bottom: 12px;
-}
-
-.summary {
-  color: #666;
-  font-size: 14px;
-}
-
-.ask-button {
-  margin-top: 12px;
-}
-
-.modal {
-  position: fixed;
-  inset: 0;
-
-  background: rgba(0, 0, 0, 0.4);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hidden {
-  display: none;
-}
-
-.modal-content {
-  width: 700px;
-  max-width: 90vw;
-
-  background: white;
-
-  border-radius: 16px;
-
-  padding: 20px;
-
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  margin-bottom: 16px;
-}
-
-.modal-sentence {
-  margin-bottom: 16px;
-
-  font-weight: bold;
-}
-
-#question-input {
-  width: 100%;
-  height: 120px;
-
-  margin-bottom: 16px;
-}
-
-#answer-area {
-  margin-top: 20px;
-
-  white-space: pre-wrap;
+  gap: 12px;
 }

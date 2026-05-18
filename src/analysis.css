@@ -1,0 +1,82 @@
+body {
+  margin: 0;
+
+  font-family: sans-serif;
+}
+
+.layout {
+  display: grid;
+
+  grid-template-rows:
+    50px 1fr;
+
+  height: 100vh;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 8px;
+
+  border-bottom:
+    1px solid #ccc;
+}
+
+.content {
+  display: grid;
+
+  grid-template-columns:
+    250px 1fr;
+
+  overflow: hidden;
+}
+
+.tree-pane {
+  border-right:
+    1px solid #ccc;
+
+  padding: 12px;
+}
+
+.right-pane {
+  display: grid;
+
+  grid-template-rows:
+    120px 120px 1fr;
+
+  overflow: hidden;
+}
+
+.sentence-pane {
+  padding: 16px;
+
+  border-bottom:
+    1px solid #ccc;
+
+  font-size: 24px;
+}
+
+.word-info {
+  padding: 16px;
+
+  border-bottom:
+    1px solid #ccc;
+}
+
+.ask-pane {
+  padding: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#ask-input {
+  height: 120px;
+}
+
+#ask-answer {
+  white-space: pre-wrap;
+}
