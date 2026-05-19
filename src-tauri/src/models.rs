@@ -4,11 +4,13 @@ use serde::{Deserialize, Serialize};
 pub struct SentenceResult {
     pub original: String,
     pub translation: String,
-    pub summary: String,
+    pub summary_ja: String,
+    pub summary_en: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LlmSentenceResponse {
     pub translation: String,
-    pub summary: String,
+    pub summary_ja: String,
+    pub summary_en: String,
 }

@@ -16,7 +16,8 @@ let currentSentences: string[] = [];
 function splitSentences(text: string): string[] {
   return text
     .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
+    .map((s) => s.replace(/\r?\n/g, ' ').trim())
+
     .filter((s) => s.length > 0);
 }
 
@@ -27,9 +28,11 @@ splitBtn.addEventListener('click', () => {
 });
 
 analyzeBtn.addEventListener('click', async () => {
-  const text = inputEl.value;
-
-  const sentences = splitSentences(text);
+  const text = sentenceListEl.value;
+  const sentences = text
+    .split(/\n{2,}/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
   await invoke('open_analysis_window', { sentences });
 });
@@ -43,17 +46,3 @@ listen('analysis_finished', () => {
 
   resultsEl.appendChild(div);
 });
-
-// function appendProgress(result: SentenceResult) {
-//   const div = document.createElement('div');
-
-//   div.className = 'progress-item';
-
-//   div.textContent = `✓ ${result.original}`;
-
-//   resultsEl.appendChild(div);
-// }
-
-// function escapeHtml(s: string): string {
-//   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-// }

@@ -4,7 +4,16 @@ use crate::models::{LlmSentenceResponse, SentenceResult};
 use crate::state::{AnalysisSession, AppState};
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
-use url::Url;
+
+fn get_model() -> String {
+    // return "qwen/qwen3-vl-4b".into();
+    return "openai/gpt-oss-20b".into();
+}
+fn extract_json(s: &str) -> Option<String> {
+    let start = s.find('{')?;
+    let end = s.rfind('}')?;
+    Some(s[start..=end].to_string())
+}
 
 #[tauri::command]
 pub async fn analyze_text(
@@ -14,7 +23,8 @@ pub async fn analyze_text(
 ) -> Result<(), String> {
     let provider = OpenAiProvider {
         endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        model: "qwen/qwen3-vl-4b".into(),
+        // model: "qwen/qwen3-vl-4b".into(),
+        model: get_model(),
         api_key: None,
     };
 
@@ -31,13 +41,14 @@ pub async fn analyze_text(
     for sentence in sentences {
         let prompt = format!(
             r#"
-Translate the sentence into Japanese and summarize briefly.
+Translate the sentence into Japanese, summarize briefly in Japanese and summarize briefly in English.
 
 Return ONLY valid JSON.
 
 {{
   "translation": "...",
-  "summary": "..."
+  "summary_ja": "...",
+  "summary_en": "..."
 }}
 
 Sentence:
@@ -53,15 +64,18 @@ Sentence:
 
         let response = provider.chat(messages).await?;
 
+        #[cfg(debug_assertions)]
+        println!("RAW:\n{}", response);
+
+        let json_text = extract_json(&response).ok_or("no json found")?;
         let parsed: LlmSentenceResponse =
-            serde_json::from_str(&response).map_err(|e| e.to_string())?;
+            serde_json::from_str(&json_text).map_err(|e| e.to_string())?;
 
         let result = SentenceResult {
             original: sentence,
-
             translation: parsed.translation,
-
-            summary: parsed.summary,
+            summary_ja: parsed.summary_ja,
+            summary_en: parsed.summary_en,
         };
 
         window
@@ -80,7 +94,7 @@ Sentence:
 pub async fn ask_ai(sentence: String, question: String) -> Result<String, String> {
     let provider = OpenAiProvider {
         endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        model: "qwen/qwen3-vl-4b".into(),
+        model: get_model(),
         api_key: None,
     };
 

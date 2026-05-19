@@ -9,10 +9,9 @@ import { listen } from '@tauri-apps/api/event';
 
 type SentenceResult = {
   original: string;
-
   translation: string;
-
-  summary: string;
+  summary_ja: string;
+  summary_en: string;
 };
 
 const sentencePane = document.querySelector('#sentence-pane')!;
@@ -74,11 +73,21 @@ function renderCurrentSentence() {
       <br />
 
       <div>
-        <b>Summary</b>
+        <b>Summary (Japanese)</b>
       </div>
 
       <div>
-        ${escapeHtml(result.summary)}
+        ${escapeHtml(result.summary_ja)}
+      </div>
+
+      <br />
+
+      <div>
+        <b>Summary (English)</b>
+      </div>
+
+      <div>
+        ${escapeHtml(result.summary_en)}
       </div>
     `;
   } else {
@@ -100,24 +109,25 @@ async function init() {
 
   renderCurrentSentence();
 
-  await listen(
-    'sentence_ready',
+  await listen('sentence_ready', (event) => {
+    console.log('Received sentence_ready event with payload:', event.payload);
+    const result = event.payload as SentenceResult;
+    const index = sentenceResults.findIndex((x) => x === null);
 
-    (event) => {
-      const result = event.payload as SentenceResult;
+    if (index >= 0) {
+      sentenceResults[index] = result;
+    }
 
-      const index = sentenceResults.findIndex((x) => x === null);
+    renderCurrentSentence();
+  });
 
-      if (index >= 0) {
-        sentenceResults[index] = result;
-      }
-
-      renderCurrentSentence();
-    },
-  );
-
-  console.log('Invoking analyze_text with label:', label);
-  invoke('analyze_text', { label });
+  try {
+    console.log('Invoking analyze_text with label:', label);
+    await invoke('analyze_text', { label });
+  } catch (e) {
+    console.error('Error invoking analyze_text:', e);
+    alert('Analysis failed:\n\n' + String(e));
+  }
 }
 
 prevBtn.addEventListener('click', () => {
