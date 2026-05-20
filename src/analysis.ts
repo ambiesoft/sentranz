@@ -12,6 +12,7 @@ type SentenceResult = {
   translation: string;
   summary_ja: string;
   summary_en: string;
+  grammar_explanation: string;
 };
 
 const sentencePane = document.querySelector('#sentence-pane')!;
@@ -37,13 +38,7 @@ let sentences: string[] = [];
 const sentenceResults: (SentenceResult | null)[] = [];
 
 function escapeHtml(s: string): string {
-  return s
-
-    .replace(/&/g, '&amp;')
-
-    .replace(/</g, '&lt;')
-
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function renderCurrentSentence() {
@@ -54,14 +49,10 @@ function renderCurrentSentence() {
   const sentence = sentences[currentIndex];
 
   sentencePane.textContent = sentence;
-
   select.value = String(currentIndex);
-
   const result = sentenceResults[currentIndex];
-
   if (result) {
     wordInfo.innerHTML = `
-
       <div>
         <b>Translation</b>
       </div>
@@ -89,6 +80,16 @@ function renderCurrentSentence() {
       <div>
         ${escapeHtml(result.summary_en)}
       </div>
+
+      <br />
+      
+      <div>
+        <b>Grammar Explanation</b>
+      </div>
+
+      <div>
+        ${escapeHtml(result.grammar_explanation)}
+      </div> 
     `;
   } else {
     wordInfo.innerHTML = 'Analyzing...';

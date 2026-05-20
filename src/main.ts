@@ -13,17 +13,9 @@ const resultsEl = document.querySelector<HTMLDivElement>('#results')!;
 
 let currentSentences: string[] = [];
 
-function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.replace(/\r?\n/g, ' ').trim())
-
-    .filter((s) => s.length > 0);
-}
-
-splitBtn.addEventListener('click', () => {
+splitBtn.addEventListener('click', async () => {
   const text = inputEl.value;
-  currentSentences = splitSentences(text);
+  currentSentences = await invoke<string[]>('split_text', { text });
   sentenceListEl.value = currentSentences.join('\n\n');
 });
 

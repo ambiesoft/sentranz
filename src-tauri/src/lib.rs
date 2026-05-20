@@ -18,6 +18,7 @@ pub fn run() {
             commands::get_session_sentences,
             commands::analyze_text,
             commands::ask_ai,
+            commands::split_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

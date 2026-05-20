@@ -44,7 +44,7 @@ body {
 }
 
 .tree-pane {
-  width: 320px;
+  width: 10%;
 
   border-right: 1px solid #ccc;
 
@@ -65,9 +65,9 @@ body {
 
 .sentence-pane {
   padding: 12px;
-
   border-bottom: 1px solid #ccc;
-
+  max-height: 30%;
+  overflow: auto;
   font-size: 20px;
   line-height: 1.6;
 
@@ -76,6 +76,8 @@ body {
 
 .word-info {
   padding: 12px;
+  max-height: 30%;
+  overflow: auto;
 
   border-bottom: 1px solid #ccc;
 

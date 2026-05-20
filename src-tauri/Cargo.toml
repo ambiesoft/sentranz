@@ -29,3 +29,5 @@ tokio = { version = "1", features = ["full"] }
 
 uuid = { version = "1", features = ["v4"] }
 url = "2.5.8"
+pragmatic-segmenter = "0.1.3"
+

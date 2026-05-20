@@ -2,6 +2,7 @@ use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
 use crate::models::{LlmSentenceResponse, SentenceResult};
 use crate::state::{AnalysisSession, AppState};
+use crate::text::splitter::split_sentences;
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
@@ -41,14 +42,15 @@ pub async fn analyze_text(
     for sentence in sentences {
         let prompt = format!(
             r#"
-Translate the sentence into Japanese, summarize briefly in Japanese and summarize briefly in English.
+Translate the sentence into Japanese, summarize briefly in Japanese, summarize briefly in English and explain it grammatically in Japanese.
 
 Return ONLY valid JSON.
 
 {{
   "translation": "...",
   "summary_ja": "...",
-  "summary_en": "..."
+  "summary_en": "...",
+  "grammar_explanation": "..."
 }}
 
 Sentence:
@@ -76,6 +78,7 @@ Sentence:
             translation: parsed.translation,
             summary_ja: parsed.summary_ja,
             summary_en: parsed.summary_en,
+            grammar_explanation: parsed.grammar_explanation,
         };
 
         window
@@ -151,4 +154,9 @@ pub fn get_session_sentences(state: State<AppState>, label: String) -> Result<Ve
     let session = sessions.get(&label).ok_or("session not found")?;
 
     Ok(session.sentences.clone())
+}
+
+#[tauri::command]
+pub fn split_text(text: String) -> Vec<String> {
+    split_sentences(&text)
 }
