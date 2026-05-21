@@ -7,9 +7,9 @@ use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 fn get_model() -> String {
-    // return "qwen/qwen3-vl-4b".into();
+    return "qwen/qwen3-vl-4b".into();
     // return "openai/gpt-oss-20b".into();
-    return "google/gemma-4-26b-a4b".into();
+    // return "google/gemma-4-26b-a4b".into();
 }
 fn extract_json(s: &str) -> Option<String> {
     let start = s.find('{')?;
