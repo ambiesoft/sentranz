@@ -6,24 +6,24 @@
 
     <main class="main-content">
       <section class="input-section">
-        <h2>Input</h2>
-
+        <div class="section-header">
+          <h2 class="section-title">Input</h2>
+          <button id="pasteBtn">Paste</button>
+          <button id="splitBtn">Split Sentences</button>
+        </div>
         <textarea id="inputText" placeholder="Paste text here..."></textarea>
       </section>
 
       <section class="split-section">
         <div class="section-header">
-          <h2>Sentences</h2>
-
-          <button id="splitBtn">Split Sentences</button>
+          <h2 class="section-title">Sentences</h2>
+          <button id="analyzeBtn">Open Analysis Window</button>
         </div>
 
         <textarea id="sentenceList"></textarea>
       </section>
 
       <section class="action-section">
-        <button id="analyzeBtn">Open Analysis Window</button>
-
         <div id="loadingArea"></div>
       </section>
 

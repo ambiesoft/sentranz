@@ -34,6 +34,17 @@ body {
   overflow: auto;
 }
 
+.section-title {
+  margin: 0;
+}
+
+.paste-btn, .split-btn {
+  padding: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .input-section,
 .split-section,
 .results-section {
@@ -45,10 +56,9 @@ body {
 
 #inputText,
 #sentenceList {
+  padding-top: 0;
   width: 100%;
-
   min-height: 180px;
-
   font-size: 16px;
 }
 

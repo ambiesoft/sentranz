@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
 const inputEl = document.querySelector<HTMLTextAreaElement>('#inputText')!;
+const pasteBtn = document.querySelector<HTMLButtonElement>('#pasteBtn')!;
 const splitBtn = document.querySelector<HTMLButtonElement>('#splitBtn')!;
 const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyzeBtn')!;
 const sentenceListEl =
@@ -12,6 +13,11 @@ const sentenceListEl =
 const resultsEl = document.querySelector<HTMLDivElement>('#results')!;
 
 let currentSentences: string[] = [];
+
+pasteBtn.addEventListener('click', async () => {
+  const text = await navigator.clipboard.readText();
+  inputEl.value = text;
+});
 
 splitBtn.addEventListener('click', async () => {
   const text = inputEl.value;
