@@ -8,4 +8,12 @@ pub struct AnalysisSession {
 
 pub struct AppState {
     pub sessions: Mutex<HashMap<String, AnalysisSession>>,
+    pub current_model: Mutex<ModelConfig>,
+}
+
+#[derive(Clone)]
+pub struct ModelConfig {
+    pub id: String,
+    pub endpoint: String,
+    pub api_key: Option<String>,
 }

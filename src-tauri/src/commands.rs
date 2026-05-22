@@ -1,20 +1,48 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
-use crate::models::{LlmSentenceResponse, SentenceResult};
+use crate::models::{LlmSentenceResponse, ModelInfo, SentenceResult};
 use crate::state::{AnalysisSession, AppState};
 use crate::text::splitter::split_sentences;
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
-fn get_model() -> String {
-    return "qwen/qwen3-vl-4b".into();
-    // return "openai/gpt-oss-20b".into();
-    // return "google/gemma-4-26b-a4b".into();
-}
+// fn get_model() -> String {
+//     // return "qwen/qwen3-vl-4b".into();
+//     // return "openai/gpt-oss-20b".into();
+//     return "google/gemma-4-26b-a4b".into();
+// }
 fn extract_json(s: &str) -> Option<String> {
     let start = s.find('{')?;
     let end = s.rfind('}')?;
     Some(s[start..=end].to_string())
+}
+
+#[tauri::command]
+pub async fn get_available_models() -> Result<Vec<ModelInfo>, String> {
+    Ok(vec![
+        ModelInfo {
+            id: "qwen/qwen3-vl-4b".into(),
+            display_name: "Qwen3 VL 4B".into(),
+            provider: "Alibaba".into(),
+        },
+        ModelInfo {
+            id: "openai/gpt-oss-20b".into(),
+            display_name: "GPT OSS 20B".into(),
+            provider: "OpenAI".into(),
+        },
+        ModelInfo {
+            id: "google/gemma-4-26b-a4b".into(),
+            display_name: "Gemma 4 26B A4B".into(),
+            provider: "Google".into(),
+        },
+    ])
+}
+
+#[tauri::command]
+pub async fn set_current_model(state: State<'_, AppState>, model_id: String) -> Result<(), String> {
+    let mut config = state.current_model.lock().unwrap();
+    config.id = model_id;
+    Ok(())
 }
 
 #[tauri::command]
@@ -25,16 +53,16 @@ pub async fn analyze_text(
 ) -> Result<(), String> {
     let provider = OpenAiProvider {
         endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        // model: "qwen/qwen3-vl-4b".into(),
-        model: get_model(),
+        model: {
+            let config = state.current_model.lock().unwrap();
+            config.id.clone()
+        },
         api_key: None,
     };
 
     let sentences = {
         let sessions = state.sessions.lock().unwrap();
-
         let session = sessions.get(&label).ok_or("session not found")?;
-
         session.sentences.clone()
     };
 
@@ -95,10 +123,18 @@ Sentence:
 }
 
 #[tauri::command]
-pub async fn ask_ai(sentence: String, question: String) -> Result<String, String> {
+pub async fn ask_ai(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+    sentence: String,
+    question: String,
+) -> Result<String, String> {
     let provider = OpenAiProvider {
         endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        model: get_model(),
+        model: {
+            let config = state.current_model.lock().unwrap();
+            config.id.clone()
+        },
         api_key: None,
     };
 

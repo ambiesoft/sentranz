@@ -12,6 +12,11 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
             sessions: std::sync::Mutex::new(std::collections::HashMap::new()),
+            current_model: std::sync::Mutex::new(state::ModelConfig {
+                id: "google/gemma-4-26b-a4b".into(),
+                endpoint: "http://localhost:1234/v1/chat/completions".into(),
+                api_key: None,
+            }),
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_analysis_window,
@@ -19,6 +24,8 @@ pub fn run() {
             commands::analyze_text,
             commands::ask_ai,
             commands::split_text,
+            commands::set_current_model,
+            commands::get_available_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
