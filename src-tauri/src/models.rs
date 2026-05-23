@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SentenceResult {
+    pub index: usize,
     pub original: String,
     pub translation: String,
     pub summary_ja: String,
@@ -22,4 +24,31 @@ pub struct ModelInfo {
     pub id: String,
     pub display_name: String,
     pub provider: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct AskAiResponse {
+    pub index: usize,
+    pub response: String,
+}
+
+#[derive(Clone)]
+pub struct LlmJob {
+    pub _id: Uuid,
+    pub window_label: String,
+    pub _priority: u32,
+    pub kind: LlmJobKind,
+}
+
+#[derive(Clone)]
+pub enum LlmJobKind {
+    AnalyzeSentence {
+        index: usize,
+        sentence: String,
+    },
+    AskAi {
+        index: usize,
+        sentence: String,
+        question: String,
+    },
 }

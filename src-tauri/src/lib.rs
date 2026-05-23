@@ -5,18 +5,32 @@ mod models;
 mod state;
 mod text;
 
+use crate::commands::llm_worker_loop;
 use state::AppState;
+use tauri::Manager;
+
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
-            sessions: std::sync::Mutex::new(std::collections::HashMap::new()),
-            current_model: std::sync::Mutex::new(state::ModelConfig {
-                id: "google/gemma-4-26b-a4b".into(),
+            sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            current_model: Arc::new(Mutex::new(state::ModelConfig {
+                id: "".into(), //"google/gemma-4-26b-a4b".into(),
                 endpoint: "http://localhost:1234/v1/chat/completions".into(),
                 api_key: None,
-            }),
+            })),
+            llm_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
+        })
+        .setup(|app| {
+            let app_handle = app.handle().clone();
+            let state = app.state::<AppState>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                llm_worker_loop(app_handle, state).await;
+            });
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_analysis_window,

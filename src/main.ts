@@ -2,7 +2,6 @@ console.log('main.ts loaded');
 
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 
 type ModelInfo = {
   id: string;
@@ -17,9 +16,17 @@ const splitBtn = document.querySelector<HTMLButtonElement>('#splitBtn')!;
 const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyzeBtn')!;
 const sentenceListEl =
   document.querySelector<HTMLTextAreaElement>('#sentenceList')!;
-const resultsEl = document.querySelector<HTMLDivElement>('#results')!;
 
 let currentSentences: string[] = [];
+
+async function setCurrentModel(modelId: string) {
+  try {
+    await invoke('set_current_model', { modelId });
+    console.log('Model set successfully:', modelId);
+  } catch (error) {
+    console.error('Error setting model:', error);
+  }
+}
 
 async function init() {
   const models: ModelInfo[] = await invoke<ModelInfo[]>('get_available_models');
@@ -32,15 +39,11 @@ async function init() {
     option.textContent = models[i].display_name;
     modelSelect.appendChild(option);
   }
+  setCurrentModel(models[0].id); // Set initial model
 
   modelSelect.addEventListener('change', async () => {
     const selectedModel = models[modelSelect.selectedIndex];
-    console.log('Selected model:', selectedModel.id);
-    try {
-      await invoke('set_current_model', { modelId: selectedModel.id });
-    } catch (error) {
-      console.error('Error setting model:', error);
-    }
+    setCurrentModel(selectedModel.id);
   });
 
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
@@ -65,13 +68,6 @@ async function init() {
       .filter((s) => s.length > 0);
 
     await invoke('open_analysis_window', { sentences });
-  });
-
-  listen('analysis_finished', () => {
-    const div = document.createElement('div');
-    div.className = 'analysis-finished';
-    div.textContent = 'Analysis finished.';
-    resultsEl.appendChild(div);
   });
 }
 

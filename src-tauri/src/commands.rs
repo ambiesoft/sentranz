@@ -1,10 +1,13 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
-use crate::models::{LlmSentenceResponse, ModelInfo, SentenceResult};
+use crate::models::{AskAiResponse, LlmSentenceResponse, ModelInfo, SentenceResult};
+use crate::models::{LlmJob, LlmJobKind};
 use crate::state::{AnalysisSession, AppState};
 use crate::text::splitter::split_sentences;
+use std::time::Duration;
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use uuid::Uuid;
 
 // fn get_model() -> String {
 //     // return "qwen/qwen3-vl-4b".into();
@@ -45,32 +48,39 @@ pub async fn set_current_model(state: State<'_, AppState>, model_id: String) -> 
     Ok(())
 }
 
-#[tauri::command]
-pub async fn analyze_text(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    label: String,
-) -> Result<(), String> {
-    let provider = OpenAiProvider {
-        endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        model: {
-            let config = state.current_model.lock().unwrap();
-            config.id.clone()
-        },
-        api_key: None,
-    };
+pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
+    loop {
+        let job = {
+            let mut queue = state.llm_queue.lock().unwrap();
 
-    let sentences = {
-        let sessions = state.sessions.lock().unwrap();
-        let session = sessions.get(&label).ok_or("session not found")?;
-        session.sentences.clone()
-    };
+            queue.pop_front()
+        };
 
-    let window = app.get_webview_window(&label).ok_or("window not found")?;
+        match job {
+            Some(job) => {
+                process_job(&app, &state, job).await;
+            }
 
-    for sentence in sentences {
-        let prompt = format!(
-            r#"
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    }
+}
+
+async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
+    match job.kind {
+        LlmJobKind::AnalyzeSentence { index, sentence } => {
+            let config = { state.current_model.lock().unwrap().clone() };
+
+            let provider = OpenAiProvider {
+                endpoint: "http://localhost:1234/v1/chat/completions".into(),
+                model: config.id,
+                api_key: None,
+            };
+
+            let prompt = format!(
+                r#"
 Translate the sentence into Japanese, summarize briefly in Japanese, summarize briefly in English and explain it grammatically in Japanese.
 
 Return ONLY valid JSON.
@@ -85,61 +95,73 @@ Return ONLY valid JSON.
 Sentence:
 {}
 "#,
-            sentence
-        );
+                sentence
+            );
 
-        let messages = vec![Message {
-            role: "user".into(),
-            content: prompt,
-        }];
+            let messages = vec![Message {
+                role: "user".into(),
+                content: prompt,
+            }];
 
-        let response = provider.chat(messages).await?;
+            let response = match provider.chat(messages).await {
+                Ok(x) => x,
 
-        #[cfg(debug_assertions)]
-        println!("RAW:\n{}", response);
+                Err(e) => {
+                    eprintln!("{}", e);
+                    return;
+                }
+            };
 
-        let json_text = extract_json(&response).ok_or("no json found")?;
-        let parsed: LlmSentenceResponse =
-            serde_json::from_str(&json_text).map_err(|e| e.to_string())?;
+            #[cfg(debug_assertions)]
+            println!("RAW:\n{}", response);
 
-        let result = SentenceResult {
-            original: sentence,
-            translation: parsed.translation,
-            summary_ja: parsed.summary_ja,
-            summary_en: parsed.summary_en,
-            grammar_explanation: parsed.grammar_explanation,
-        };
+            let json_text = match extract_json(&response) {
+                Some(x) => x,
 
-        window
-            .emit("sentence_ready", &result)
-            .map_err(|e| e.to_string())?;
-    }
+                None => {
+                    eprintln!("no json found");
+                    return;
+                }
+            };
 
-    window
-        .emit("analysis_finished", ())
-        .map_err(|e| e.to_string())?;
+            let parsed: LlmSentenceResponse = match serde_json::from_str(&json_text) {
+                Ok(x) => x,
 
-    Ok(())
-}
+                Err(e) => {
+                    eprintln!("{}", e);
+                    return;
+                }
+            };
 
-#[tauri::command]
-pub async fn ask_ai(
-    _app: AppHandle,
-    state: State<'_, AppState>,
-    sentence: String,
-    question: String,
-) -> Result<String, String> {
-    let provider = OpenAiProvider {
-        endpoint: "http://localhost:1234/v1/chat/completions".into(),
-        model: {
-            let config = state.current_model.lock().unwrap();
-            config.id.clone()
-        },
-        api_key: None,
-    };
+            let result = SentenceResult {
+                index,
+                original: sentence,
+                translation: parsed.translation,
+                summary_ja: parsed.summary_ja,
+                summary_en: parsed.summary_en,
+                grammar_explanation: parsed.grammar_explanation,
+            };
 
-    let prompt = format!(
-        r#"You are an English reading tutor.
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                let _ = window.emit("sentence_ready", &result);
+            }
+        }
+
+        LlmJobKind::AskAi {
+            index,
+            sentence,
+            question,
+        } => {
+            let config = { state.current_model.lock().unwrap().clone() };
+
+            let provider = OpenAiProvider {
+                endpoint: config.endpoint,
+                model: config.id,
+                api_key: config.api_key,
+            };
+
+            let prompt = format!(
+                r#"You are an English reading tutor.
 
 Sentence:
 {}
@@ -149,17 +171,84 @@ User question:
 
 Answer in Japanese.
 Explain clearly and briefly."#,
-        sentence, question
-    );
+                sentence, question
+            );
 
-    let messages = vec![Message {
-        role: "user".into(),
-        content: prompt,
-    }];
+            let messages = vec![Message {
+                role: "user".into(),
 
-    let response = provider.chat(messages).await?;
+                content: prompt,
+            }];
 
-    Ok(response)
+            let response = match provider.chat(messages).await {
+                Ok(x) => x,
+
+                Err(e) => {
+                    eprintln!("{}", e);
+                    return;
+                }
+            };
+
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                let payload = AskAiResponse { index, response };
+
+                let _ = window.emit("ask_ai_response", payload);
+            }
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn analyze_text(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+    label: String,
+) -> Result<(), String> {
+    let sentences = {
+        let sessions = state.sessions.lock().unwrap();
+        let session = sessions.get(&label).ok_or("session not found")?;
+        session.sentences.clone()
+    };
+
+    for (index, sentence) in sentences.into_iter().enumerate() {
+        let job = LlmJob {
+            _id: Uuid::new_v4(),
+            window_label: label.clone(),
+            _priority: 100,
+            kind: LlmJobKind::AnalyzeSentence { index, sentence },
+        };
+
+        state.llm_queue.lock().unwrap().push_back(job);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn ask_ai(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+    label: String,
+    index: usize,
+    sentence: String,
+    question: String,
+) -> Result<(), String> {
+    let job = LlmJob {
+        _id: Uuid::new_v4(),
+        window_label: label,
+        _priority: 0,
+        kind: LlmJobKind::AskAi {
+            index,
+            sentence,
+            question,
+        },
+    };
+
+    let mut queue = state.llm_queue.lock().unwrap();
+
+    queue.push_front(job);
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -175,11 +264,24 @@ pub async fn open_analysis_window(
         sessions.insert(label.clone(), AnalysisSession { sentences });
     }
 
-    WebviewWindowBuilder::new(&app, label, WebviewUrl::App("analysis.html".into()))
-        .title("Analysis")
-        .devtools(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+    let window =
+        WebviewWindowBuilder::new(&app, label.clone(), WebviewUrl::App("analysis.html".into()))
+            .title("Analysis")
+            .devtools(true)
+            .build()
+            .map_err(|e| e.to_string())?;
+
+    let state = app.state::<AppState>().inner().clone();
+    let label_clone = label.clone();
+
+    // Clean up session and pending jobs when window is closed
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Destroyed = event {
+            let mut queue = state.llm_queue.lock().unwrap();
+            queue.retain(|job| job.window_label != label_clone);
+            println!("cleaned queue for {}", label_clone);
+        }
+    });
 
     Ok(())
 }

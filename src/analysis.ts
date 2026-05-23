@@ -5,11 +5,16 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 
 type SentenceResult = {
+  index: number;
   original: string;
   translation: string;
   summary_ja: string;
   summary_en: string;
   grammar_explanation: string;
+};
+type AskAiResponse = {
+  index: number;
+  response: string;
 };
 
 const sentencePane = document.querySelector('#sentence-pane')!;
@@ -30,25 +35,27 @@ const appWindow = getCurrentWindow();
 const label = appWindow.label;
 
 let currentIndex = 0;
-let sentences: string[] = [];
-let userQuestions: string[] = [];
-
-const sentenceResults: (SentenceResult | null)[] = [];
+type State = {
+  sentence: string;
+  sentenceResult: SentenceResult | null;
+  userQuestion: string;
+  askAnswer: string;
+};
+let states: State[] = [];
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function renderCurrentData() {
-  if (sentences.length === 0) {
+  if (states.length === 0) {
     return;
   }
 
-  const sentence = sentences[currentIndex];
-
-  sentencePane.textContent = sentence;
   sentenceSelect.value = String(currentIndex);
-  const result = sentenceResults[currentIndex];
+  sentencePane.textContent = states[currentIndex].sentence;
+
+  const result = states[currentIndex].sentenceResult;
   if (result) {
     wordInfo.innerHTML = `
       <div>
@@ -93,20 +100,27 @@ function renderCurrentData() {
     wordInfo.innerHTML = 'Analyzing...';
   }
 
+  askAnswer.textContent = states[currentIndex].askAnswer || '';
+
   // Load user's question for this sentence, if any
-  askInput.value = userQuestions[currentIndex] || '';
+  askInput.value = states[currentIndex].userQuestion || '';
 }
 
 async function init() {
   console.log('Invoking get_session_sentences with label:', label);
-  sentences = await invoke<string[]>('get_session_sentences', { label });
+  let sentences = await invoke<string[]>('get_session_sentences', { label });
 
   for (let i = 0; i < sentences.length; i++) {
     const option = document.createElement('option');
     option.value = String(i);
     option.textContent = `Sentence ${i + 1}`;
     sentenceSelect.appendChild(option);
-    sentenceResults.push(null);
+    states.push({
+      sentence: sentences[i],
+      sentenceResult: null,
+      userQuestion: '',
+      askAnswer: '',
+    });
   }
 
   renderCurrentData();
@@ -114,13 +128,26 @@ async function init() {
   await listen('sentence_ready', (event) => {
     console.log('Received sentence_ready event with payload:', event.payload);
     const result = event.payload as SentenceResult;
-    const index = sentenceResults.findIndex((x) => x === null);
+    const index = result.index;
 
     if (index >= 0) {
-      sentenceResults[index] = result;
+      states[index].sentenceResult = result;
     }
+    if (index === currentIndex) {
+      saveCurrentQA();
+      renderCurrentData();
+    }
+  });
 
-    renderCurrentData();
+  await listen('ask_ai_response', (event) => {
+    console.log('Received ask_ai_response event with payload:', event.payload);
+    const response = event.payload as AskAiResponse;
+    const index = response.index;
+    states[index].askAnswer = response.response;
+    if (index === currentIndex) {
+      renderCurrentData();
+    }
+    askBtn.disabled = false;
   });
 
   try {
@@ -130,18 +157,21 @@ async function init() {
     console.error('Error invoking analyze_text:', e);
     alert('Analysis failed:\n\n' + String(e));
   }
-}
+} // End of init function
 
-function saveCurrentQuestion() {
-  if (sentences.length === 0) {
+function saveCurrentQA() {
+  if (states.length === 0) {
     return;
   }
+  const currentanswer = askAnswer.textContent?.trim() || '';
+  states[currentIndex].askAnswer = currentanswer;
+
   const currentQuestion = askInput.value.trim();
-  userQuestions[currentIndex] = currentQuestion;
+  states[currentIndex].userQuestion = currentQuestion;
 }
 prevBtn.addEventListener('click', () => {
   if (currentIndex > 0) {
-    saveCurrentQuestion();
+    saveCurrentQA();
     currentIndex--;
 
     renderCurrentData();
@@ -149,8 +179,8 @@ prevBtn.addEventListener('click', () => {
 });
 
 nextBtn.addEventListener('click', () => {
-  if (currentIndex < sentences.length - 1) {
-    saveCurrentQuestion();
+  if (currentIndex < states.length - 1) {
+    saveCurrentQA();
 
     currentIndex++;
     renderCurrentData();
@@ -158,7 +188,7 @@ nextBtn.addEventListener('click', () => {
 });
 
 sentenceSelect.addEventListener('change', () => {
-  saveCurrentQuestion();
+  saveCurrentQA();
   currentIndex = Number(sentenceSelect.value);
   renderCurrentData();
 });
@@ -170,22 +200,20 @@ askBtn.addEventListener('click', async () => {
     return;
   }
 
-  const sentence = sentences[currentIndex];
+  const sentence = states[currentIndex].sentence;
   askAnswer.textContent = 'Thinking...';
   askBtn.disabled = true;
 
   try {
-    const response = await invoke<string>('ask_ai', {
+    await invoke<AskAiResponse>('ask_ai', {
+      label,
+      index: currentIndex,
       sentence,
       question,
     });
-
-    askAnswer.textContent = response;
   } catch (e) {
-    askAnswer.textContent = String(e);
-  } finally {
-    askBtn.disabled = false;
+    alert('Failed to get answer:\n\n' + String(e));
   }
-});
+}); // End of askBtn click handler;
 
 init();
