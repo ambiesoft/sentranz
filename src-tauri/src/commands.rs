@@ -1,6 +1,6 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
-use crate::models::{AskAiResponse, LlmSentenceResponse, ModelInfo, SentenceResult};
+use crate::models::{AskAiResponse, JobError, LlmSentenceResponse, ModelInfo, SentenceResult};
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::{AnalysisSession, AppState};
 use crate::text::splitter::split_sentences;
@@ -71,16 +71,19 @@ pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
 async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
     match job.kind {
         LlmJobKind::AnalyzeSentence { index, sentence } => {
-            let config = { state.current_model.lock().unwrap().clone() };
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                // window found, continue processing
 
-            let provider = OpenAiProvider {
-                endpoint: "http://localhost:1234/v1/chat/completions".into(),
-                model: config.id,
-                api_key: None,
-            };
+                let config = { state.current_model.lock().unwrap().clone() };
 
-            let prompt = format!(
-                r#"
+                let provider = OpenAiProvider {
+                    endpoint: "http://localhost:1234/v1/chat/completions".into(),
+                    model: config.id,
+                    api_key: None,
+                };
+
+                let prompt = format!(
+                    r#"
 Translate the sentence into Japanese, summarize briefly in Japanese, summarize briefly in English and explain it grammatically in Japanese.
 
 Return ONLY valid JSON.
@@ -95,55 +98,79 @@ Return ONLY valid JSON.
 Sentence:
 {}
 "#,
-                sentence
-            );
+                    sentence
+                );
 
-            let messages = vec![Message {
-                role: "user".into(),
-                content: prompt,
-            }];
+                let messages = vec![Message {
+                    role: "user".into(),
+                    content: prompt,
+                }];
 
-            let response = match provider.chat(messages).await {
-                Ok(x) => x,
+                let response = match provider.chat(messages).await {
+                    Ok(x) => x,
 
-                Err(e) => {
-                    eprintln!("{}", e);
-                    return;
-                }
-            };
+                    Err(e) => {
+                        eprintln!("CHAT ERROR: {:?}", e);
+                        let _ = window.emit(
+                            "analysis_error",
+                            JobError {
+                                index,
+                                message: format!("LLM request error: {}", e),
+                                raw_response: None,
+                            },
+                        );
+                        return;
+                    }
+                };
 
-            #[cfg(debug_assertions)]
-            println!("RAW:\n{}", response);
+                #[cfg(debug_assertions)]
+                println!("RAW:\n{}", response);
 
-            let json_text = match extract_json(&response) {
-                Some(x) => x,
+                let json_text = match extract_json(&response) {
+                    Some(x) => x,
 
-                None => {
-                    eprintln!("no json found");
-                    return;
-                }
-            };
+                    None => {
+                        let _ = window.emit(
+                            "analysis_error",
+                            JobError {
+                                index,
+                                message: format!("JSON parse error"),
+                                raw_response: Some(response),
+                            },
+                        );
+                        return;
+                    }
+                };
 
-            let parsed: LlmSentenceResponse = match serde_json::from_str(&json_text) {
-                Ok(x) => x,
+                let parsed: LlmSentenceResponse = match serde_json::from_str(&json_text) {
+                    Ok(x) => x,
 
-                Err(e) => {
-                    eprintln!("{}", e);
-                    return;
-                }
-            };
+                    Err(e) => {
+                        let _ = window.emit(
+                            "analysis_error",
+                            JobError {
+                                index,
+                                message: format!("JSON format error: {}", e),
+                                raw_response: Some(response),
+                            },
+                        );
+                        return;
+                    }
+                };
 
-            let result = SentenceResult {
-                index,
-                original: sentence,
-                translation: parsed.translation,
-                summary_ja: parsed.summary_ja,
-                summary_en: parsed.summary_en,
-                grammar_explanation: parsed.grammar_explanation,
-            };
+                let result = SentenceResult {
+                    index,
+                    original: sentence,
+                    translation: parsed.translation,
+                    summary_ja: parsed.summary_ja,
+                    summary_en: parsed.summary_en,
+                    grammar_explanation: parsed.grammar_explanation,
+                };
 
-            if let Some(window) = app.get_webview_window(&job.window_label) {
                 let _ = window.emit("sentence_ready", &result);
+            } else {
+                eprintln!("window not found: {}", job.window_label);
+                return;
             }
         }
 
@@ -152,16 +179,17 @@ Sentence:
             sentence,
             question,
         } => {
-            let config = { state.current_model.lock().unwrap().clone() };
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                let config = { state.current_model.lock().unwrap().clone() };
 
-            let provider = OpenAiProvider {
-                endpoint: config.endpoint,
-                model: config.id,
-                api_key: config.api_key,
-            };
+                let provider = OpenAiProvider {
+                    endpoint: config.endpoint,
+                    model: config.id,
+                    api_key: config.api_key,
+                };
 
-            let prompt = format!(
-                r#"You are an English reading tutor.
+                let prompt = format!(
+                    r#"You are an English reading tutor.
 
 Sentence:
 {}
@@ -171,28 +199,34 @@ User question:
 
 Answer in Japanese.
 Explain clearly and briefly."#,
-                sentence, question
-            );
+                    sentence, question
+                );
 
-            let messages = vec![Message {
-                role: "user".into(),
+                let messages = vec![Message {
+                    role: "user".into(),
+                    content: prompt,
+                }];
 
-                content: prompt,
-            }];
+                let response = match provider.chat(messages).await {
+                    Ok(x) => x,
+                    Err(e) => {
+                        let _ = window.emit(
+                            "ask_ai_error",
+                            JobError {
+                                index,
+                                message: format!("LLM request error: {}", e),
+                                raw_response: None,
+                            },
+                        );
+                        return;
+                    }
+                };
 
-            let response = match provider.chat(messages).await {
-                Ok(x) => x,
-
-                Err(e) => {
-                    eprintln!("{}", e);
-                    return;
-                }
-            };
-
-            if let Some(window) = app.get_webview_window(&job.window_label) {
                 let payload = AskAiResponse { index, response };
-
                 let _ = window.emit("ask_ai_response", payload);
+            } else {
+                eprintln!("window not found: {}", job.window_label);
+                return;
             }
         }
     }

@@ -16,6 +16,11 @@ type AskAiResponse = {
   index: number;
   response: string;
 };
+type JobError = {
+  index: number;
+  message: string;
+  raw_response?: string;
+};
 
 const sentencePane = document.querySelector('#sentence-pane')!;
 const wordInfo = document.querySelector('#word-info')!;
@@ -145,6 +150,53 @@ async function init() {
     const index = response.index;
     states[index].askAnswer = response.response;
     if (index === currentIndex) {
+      renderCurrentData();
+    }
+    askBtn.disabled = false;
+  });
+
+  await listen('analysis_error', (event) => {
+    console.log('Received analysis_error event with payload:', event.payload);
+    const error = event.payload as JobError;
+    console.log(
+      'Received analysis_error event with payload:',
+      event.payload,
+      'currentIndex:',
+      currentIndex,
+      'error.index:',
+      error.index,
+    );
+    if (error.raw_response) {
+      console.error('Raw response from backend:', error.raw_response);
+    }
+    if (error.index === currentIndex) {
+      states[error.index].sentenceResult = {
+        index: error.index,
+        original: states[error.index].sentence,
+        translation: `Error: ${error.message}`,
+        summary_ja: '',
+        summary_en: '',
+        grammar_explanation: '',
+      };
+      renderCurrentData();
+    }
+  });
+
+  await listen('ask_ai_error', (event) => {
+    const error = event.payload as JobError;
+    if (error.raw_response) {
+      console.error('Raw response from backend:', error.raw_response);
+    }
+    console.log(
+      'Received ask_ai_error event with payload:',
+      event.payload,
+      'currentIndex:',
+      currentIndex,
+      'error.index:',
+      error.index,
+    );
+    if (error.index === currentIndex) {
+      states[error.index].askAnswer = `Error: ${error.message}`;
       renderCurrentData();
     }
     askBtn.disabled = false;

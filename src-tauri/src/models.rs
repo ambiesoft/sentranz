@@ -52,3 +52,10 @@ pub enum LlmJobKind {
         question: String,
     },
 }
+
+#[derive(Serialize, Clone)]
+pub struct JobError {
+    pub index: usize,
+    pub message: String,
+    pub raw_response: Option<String>,
+}

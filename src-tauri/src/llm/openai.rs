@@ -24,16 +24,18 @@ impl OpenAiProvider {
             builder = builder.bearer_auth(key);
         }
 
-        let res = builder
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let res = builder.send().await.map_err(|e| e.to_string())?;
 
-        let json: ChatResponse = res
-            .json()
-            .await
-            .map_err(|e| e.to_string())?;
+        #[cfg(debug_assertions)]
+        println!("OpenAI response: {:?}", res);
 
+        let json: ChatResponse = res.json().await.map_err(|e| e.to_string())?;
+
+        #[cfg(debug_assertions)]
+        println!(
+            "OpenAI response JSON: {:?}",
+            json.choices[0].message.content
+        );
         Ok(json.choices[0].message.content.clone())
     }
 }
