@@ -2,7 +2,6 @@ console.log('analysis.ts loaded');
 import './analysis.css';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
 
 type SentenceResult = {
   index: number;
@@ -15,6 +14,10 @@ type SentenceResult = {
 type AskAiResponse = {
   index: number;
   response: string;
+};
+type JobProgress = {
+  index: number;
+  message: string;
 };
 type JobError = {
   index: number;
@@ -36,12 +39,13 @@ const askBtn = document.querySelector('#ask-btn') as HTMLButtonElement;
 const askAnswer = document.querySelector('#ask-answer') as HTMLDivElement;
 
 const appWindow = getCurrentWindow();
-
 const label = appWindow.label;
+console.log('Current window label:', label);
 
 let currentIndex = 0;
 type State = {
   sentence: string;
+  progressMessage?: string;
   sentenceResult: SentenceResult | null;
   userQuestion: string;
   askAnswer: string;
@@ -101,8 +105,10 @@ function renderCurrentData() {
         ${escapeHtml(result.grammar_explanation)}
       </div> 
     `;
+  } else if (states[currentIndex].progressMessage) {
+    wordInfo.innerHTML = states[currentIndex].progressMessage || '';
   } else {
-    wordInfo.innerHTML = 'Analyzing...';
+    wordInfo.innerHTML = 'Waiting...';
   }
 
   askAnswer.textContent = states[currentIndex].askAnswer || '';
@@ -130,7 +136,7 @@ async function init() {
 
   renderCurrentData();
 
-  await listen('sentence_ready', (event) => {
+  await appWindow.listen('sentence_ready', (event) => {
     console.log('Received sentence_ready event with payload:', event.payload);
     const result = event.payload as SentenceResult;
     const index = result.index;
@@ -144,7 +150,7 @@ async function init() {
     }
   });
 
-  await listen('ask_ai_response', (event) => {
+  await appWindow.listen('ask_ai_response', (event) => {
     console.log('Received ask_ai_response event with payload:', event.payload);
     const response = event.payload as AskAiResponse;
     const index = response.index;
@@ -155,7 +161,19 @@ async function init() {
     askBtn.disabled = false;
   });
 
-  await listen('analysis_error', (event) => {
+  await appWindow.listen('analysis_progress', (event) => {
+    console.log(
+      'Received analysis_progress event with payload:',
+      event.payload,
+    );
+    const progress = event.payload as JobProgress;
+    states[progress.index].progressMessage = progress.message;
+    if (progress.index === currentIndex) {
+      renderCurrentData();
+    }
+  });
+
+  await appWindow.listen('analysis_error', (event) => {
     console.log('Received analysis_error event with payload:', event.payload);
     const error = event.payload as JobError;
     console.log(
@@ -182,7 +200,16 @@ async function init() {
     }
   });
 
-  await listen('ask_ai_error', (event) => {
+  await appWindow.listen('ask_ai_progress', (event) => {
+    console.log('Received ask_ai_progress event with payload:', event.payload);
+    const progress = event.payload as JobProgress;
+    states[progress.index].askAnswer = progress.message;
+    if (progress.index === currentIndex) {
+      renderCurrentData();
+    }
+  });
+
+  await appWindow.listen('ask_ai_error', (event) => {
     const error = event.payload as JobError;
     if (error.raw_response) {
       console.error('Raw response from backend:', error.raw_response);
@@ -253,7 +280,7 @@ askBtn.addEventListener('click', async () => {
   }
 
   const sentence = states[currentIndex].sentence;
-  askAnswer.textContent = 'Thinking...';
+  askAnswer.textContent = 'Waiting...';
   askBtn.disabled = true;
 
   try {

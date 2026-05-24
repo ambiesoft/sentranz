@@ -38,7 +38,7 @@ body {
   margin: 0;
 }
 
-.paste-btn, .split-btn {
+.clear-btn, .paste-btn, .split-btn {
   padding: none;
   border: none;
   font-size: 14px;

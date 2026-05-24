@@ -59,3 +59,9 @@ pub struct JobError {
     pub message: String,
     pub raw_response: Option<String>,
 }
+
+#[derive(Serialize, Clone)]
+pub struct JobProgress {
+    pub index: usize,
+    pub message: String,
+}

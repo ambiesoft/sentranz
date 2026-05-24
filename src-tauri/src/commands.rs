@@ -1,6 +1,8 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
-use crate::models::{AskAiResponse, JobError, LlmSentenceResponse, ModelInfo, SentenceResult};
+use crate::models::{
+    AskAiResponse, JobError, JobProgress, LlmSentenceResponse, ModelInfo, SentenceResult,
+};
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::{AnalysisSession, AppState};
 use crate::text::splitter::split_sentences;
@@ -71,6 +73,10 @@ pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
 async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
     match job.kind {
         LlmJobKind::AnalyzeSentence { index, sentence } => {
+            eprint!(
+                "Analyzing sentence with label {}: {}\n",
+                job.window_label, sentence
+            );
             if let Some(window) = app.get_webview_window(&job.window_label) {
                 // window found, continue processing
 
@@ -106,12 +112,22 @@ Sentence:
                     content: prompt,
                 }];
 
+                let _ = window.emit_to(
+                    job.window_label.clone(),
+                    "analysis_progress",
+                    JobProgress {
+                        index,
+                        message: "Thinking...".into(),
+                    },
+                );
+
                 let response = match provider.chat(messages).await {
                     Ok(x) => x,
 
                     Err(e) => {
                         eprintln!("CHAT ERROR: {:?}", e);
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
                             "analysis_error",
                             JobError {
                                 index,
@@ -130,7 +146,8 @@ Sentence:
                     Some(x) => x,
 
                     None => {
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
                             "analysis_error",
                             JobError {
                                 index,
@@ -146,7 +163,8 @@ Sentence:
                     Ok(x) => x,
 
                     Err(e) => {
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
                             "analysis_error",
                             JobError {
                                 index,
@@ -167,7 +185,7 @@ Sentence:
                     grammar_explanation: parsed.grammar_explanation,
                 };
 
-                let _ = window.emit("sentence_ready", &result);
+                let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);
             } else {
                 eprintln!("window not found: {}", job.window_label);
                 return;
@@ -179,6 +197,10 @@ Sentence:
             sentence,
             question,
         } => {
+            eprint!(
+                "Asking AI question with label {}: {}\n",
+                job.window_label, sentence
+            );
             if let Some(window) = app.get_webview_window(&job.window_label) {
                 let config = { state.current_model.lock().unwrap().clone() };
 
@@ -207,10 +229,20 @@ Explain clearly and briefly."#,
                     content: prompt,
                 }];
 
+                let _ = window.emit_to(
+                    job.window_label.clone(),
+                    "ask_ai_progress",
+                    JobProgress {
+                        index,
+                        message: "Thinking...".into(),
+                    },
+                );
+
                 let response = match provider.chat(messages).await {
                     Ok(x) => x,
                     Err(e) => {
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
                             "ask_ai_error",
                             JobError {
                                 index,
@@ -223,7 +255,7 @@ Explain clearly and briefly."#,
                 };
 
                 let payload = AskAiResponse { index, response };
-                let _ = window.emit("ask_ai_response", payload);
+                let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
             } else {
                 eprintln!("window not found: {}", job.window_label);
                 return;
@@ -300,8 +332,8 @@ pub async fn open_analysis_window(
 
     let window =
         WebviewWindowBuilder::new(&app, label.clone(), WebviewUrl::App("analysis.html".into()))
-            .title("Analysis")
-            .devtools(true)
+            .title(label.clone())
+            // .devtools(true)
             .build()
             .map_err(|e| e.to_string())?;
 

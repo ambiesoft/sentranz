@@ -41,6 +41,7 @@ pub fn run() {
             commands::set_current_model,
             commands::get_available_models,
         ])
+        .plugin(tauri_plugin_store::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

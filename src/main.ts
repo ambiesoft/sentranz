@@ -2,6 +2,7 @@ console.log('main.ts loaded');
 
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
+import { Store } from '@tauri-apps/plugin-store';
 
 type ModelInfo = {
   id: string;
@@ -11,6 +12,7 @@ type ModelInfo = {
 
 const inputEl = document.querySelector<HTMLTextAreaElement>('#inputText')!;
 const modelSelect = document.querySelector<HTMLSelectElement>('#model-select')!;
+const clearBtn = document.querySelector<HTMLButtonElement>('#clearBtn')!;
 const pasteBtn = document.querySelector<HTMLButtonElement>('#pasteBtn')!;
 const splitBtn = document.querySelector<HTMLButtonElement>('#splitBtn')!;
 const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyzeBtn')!;
@@ -29,6 +31,8 @@ async function setCurrentModel(modelId: string) {
 }
 
 async function init() {
+  const store = await Store.load('settings.json');
+
   const models: ModelInfo[] = await invoke<ModelInfo[]>('get_available_models');
   console.log('Available models:', models);
 
@@ -39,11 +43,31 @@ async function init() {
     option.textContent = models[i].display_name;
     modelSelect.appendChild(option);
   }
-  setCurrentModel(models[0].id); // Set initial model
+  const savedModel = await store.get<string>('current_model');
+  if (savedModel) {
+    const idx = models.findIndex((x) => x.id === savedModel);
+
+    if (idx >= 0) {
+      modelSelect.selectedIndex = idx;
+
+      await invoke('set_current_model', {
+        modelId: savedModel,
+      });
+    }
+  } else {
+    setCurrentModel(models[0].id); // Set initial model
+  }
 
   modelSelect.addEventListener('change', async () => {
     const selectedModel = models[modelSelect.selectedIndex];
     setCurrentModel(selectedModel.id);
+    await store.set('current_model', selectedModel.id);
+
+    await store.save();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    inputEl.value = '';
   });
 
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
