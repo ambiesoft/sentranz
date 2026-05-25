@@ -40,6 +40,7 @@ pub fn run() {
             commands::split_text,
             commands::set_current_model,
             commands::get_available_models,
+            commands::window_focused,
         ])
         .plugin(tauri_plugin_store::Builder::default().build())
         .run(tauri::generate_context!())

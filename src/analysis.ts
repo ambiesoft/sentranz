@@ -295,4 +295,11 @@ askBtn.addEventListener('click', async () => {
   }
 }); // End of askBtn click handler;
 
+appWindow.onFocusChanged(async ({ payload }) => {
+  if (payload) {
+    await invoke('window_focused', {
+      label: appWindow.label,
+    });
+  }
+});
 init();

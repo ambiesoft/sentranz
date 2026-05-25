@@ -355,7 +355,6 @@ pub async fn open_analysis_window(
 #[tauri::command]
 pub fn get_session_sentences(state: State<AppState>, label: String) -> Result<Vec<String>, String> {
     let sessions = state.sessions.lock().unwrap();
-
     let session = sessions.get(&label).ok_or("session not found")?;
 
     Ok(session.sentences.clone())
@@ -364,4 +363,34 @@ pub fn get_session_sentences(state: State<AppState>, label: String) -> Result<Ve
 #[tauri::command]
 pub fn split_text(text: String) -> Vec<String> {
     split_sentences(&text)
+}
+
+#[tauri::command]
+pub fn window_focused(state: State<AppState>, label: String) {
+    let mut queue = state.llm_queue.lock().unwrap();
+
+    //
+    // focused window jobs first
+    //
+    let mut focused = vec![];
+    let mut others = vec![];
+
+    while let Some(job) = queue.pop_front() {
+        if job.window_label == label {
+            focused.push(job);
+        } else {
+            others.push(job);
+        }
+    }
+
+    //
+    // rebuild
+    //
+    for job in focused {
+        queue.push_back(job);
+    }
+
+    for job in others {
+        queue.push_back(job);
+    }
 }
