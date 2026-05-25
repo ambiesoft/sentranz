@@ -1,44 +1,24 @@
 body {
   margin: 0;
-
   font-family: sans-serif;
-}
-
-.main-layout {
-  display: grid;
-
-  grid-template-rows:
-    60px 1fr;
-
-  height: 100vh;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-
-  padding: 0 20px;
-
-  border-bottom:
-    1px solid #ccc;
 }
 
 .main-content {
   display: flex;
   flex-direction: column;
-
   gap: 20px;
-
   padding: 20px;
-
   overflow: auto;
+  height: stretch;
 }
 
 .section-title {
   margin: 0;
 }
 
-.clear-btn, .paste-btn, .split-btn {
+.clear-btn,
+.paste-btn,
+.split-btn {
   padding: none;
   border: none;
   font-size: 14px;
@@ -49,31 +29,21 @@ body {
 .split-section {
   display: flex;
   flex-direction: column;
-
   gap: 12px;
+  height: 50%;
 }
 
 #inputText,
 #sentenceList {
   padding-top: 0;
   width: 100%;
+  height: 100%;
   min-height: 180px;
   font-size: 16px;
 }
 
 .section-header {
   display: flex;
-
   align-items: center;
-
-  justify-content:
-    space-between;
-}
-
-.action-section {
-  display: flex;
-
-  align-items: center;
-
-  gap: 16px;
+  justify-content: space-between;
 }

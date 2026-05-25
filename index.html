@@ -1,35 +1,24 @@
 <body>
-  <div class="main-layout">
-    <header class="topbar">
-      <h1>Sentranz</h1>
-    </header>
+  <main class="main-content">
+    <section class="input-section">
+      <div class="section-header">
+        <h2 class="section-title">Input</h2>
+        <select id="model-select"></select>
+        <button id="clearBtn">Clear</button>
+        <button id="pasteBtn">Paste</button>
+        <button id="splitBtn">Split Sentences</button>
+      </div>
+      <textarea id="inputText" placeholder="Paste text here..."></textarea>
+    </section>
 
-    <main class="main-content">
-      <section class="input-section">
-        <div class="section-header">
-          <h2 class="section-title">Input</h2>
-          <select id="model-select"></select>
-          <button id="clearBtn">Clear</button>
-          <button id="pasteBtn">Paste</button>
-          <button id="splitBtn">Split Sentences</button>
-        </div>
-        <textarea id="inputText" placeholder="Paste text here..."></textarea>
-      </section>
+    <section class="split-section">
+      <div class="section-header">
+        <h2 class="section-title">Sentences</h2>
+        <button id="analyzeBtn">Open Analysis Window</button>
+      </div>
 
-      <section class="split-section">
-        <div class="section-header">
-          <h2 class="section-title">Sentences</h2>
-          <button id="analyzeBtn">Open Analysis Window</button>
-        </div>
-
-        <textarea id="sentenceList"></textarea>
-      </section>
-
-      <section class="action-section">
-        <div id="loadingArea"></div>
-      </section>
-    </main>
-  </div>
-
+      <textarea id="sentenceList"></textarea>
+    </section>
+  </main>
   <script type="module" src="/src/main.ts"></script>
 </body>
