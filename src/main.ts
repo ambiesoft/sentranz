@@ -10,14 +10,17 @@ type ModelInfo = {
   provider: string;
 };
 
-const inputEl = document.querySelector<HTMLTextAreaElement>('#inputText')!;
+const inputEl = document.querySelector<HTMLTextAreaElement>('#input-text')!;
 const modelSelect = document.querySelector<HTMLSelectElement>('#model-select')!;
-const clearBtn = document.querySelector<HTMLButtonElement>('#clearBtn')!;
-const pasteBtn = document.querySelector<HTMLButtonElement>('#pasteBtn')!;
-const splitBtn = document.querySelector<HTMLButtonElement>('#splitBtn')!;
-const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyzeBtn')!;
+const clearBtn = document.querySelector<HTMLButtonElement>('#clear-btn')!;
+const pasteHtmlBtn =
+  document.querySelector<HTMLButtonElement>('#paste-html-btn')!;
+const pasteTextBtn =
+  document.querySelector<HTMLButtonElement>('#paste-text-btn')!;
+const splitBtn = document.querySelector<HTMLButtonElement>('#split-btn')!;
+const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
 const sentenceListEl =
-  document.querySelector<HTMLTextAreaElement>('#sentenceList')!;
+  document.querySelector<HTMLTextAreaElement>('#sentence-list')!;
 
 let currentSentences: string[] = [];
 
@@ -71,27 +74,118 @@ async function init() {
   });
 
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
-  pasteBtn.addEventListener('click', async () => {
-    const text = await navigator.clipboard.readText();
-    inputEl.value = text;
+  pasteHtmlBtn.addEventListener(
+    'click',
+
+    async () => {
+      const items = await navigator.clipboard.read();
+
+      for (const item of items) {
+        console.log(item.types);
+
+        if (item.types.includes('text/html')) {
+          const blob = await item.getType('text/html');
+          const html = await blob.text();
+          inputEl.value = html;
+          return;
+        }
+      }
+      alert('No HTML content found in clipboard.');
+    },
+  );
+
+  pasteTextBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        alert('No text content found in clipboard.');
+        return;
+      }
+      inputEl.value = text;
+    } catch (error) {
+      console.error('Failed to read clipboard contents: ', error);
+    }
   });
 
   // Split Handler: Sends the input text to the Rust backend for splitting and updates the sentence list textarea
   splitBtn.addEventListener('click', async () => {
-    const text = inputEl.value;
-    currentSentences = await invoke<string[]>('split_text', { text });
-    sentenceListEl.value = currentSentences.join('\n\n');
+    let text = inputEl.value.trim();
+    if (!text) {
+      alert('Please enter some text to split.');
+      return;
+    }
+    let doneHtmlParsing = false;
+    do {
+      try {
+        if (!text) {
+          alert('Please enter some text to split.');
+          return;
+        }
+        // check if first letter is "<" and last letter is ">"
+        if (!text.trim().startsWith('<') || !text.trim().endsWith('>')) {
+          console.log('Text does not appear to be HTML, skipping HTML parsing');
+          break;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        // sanitize the text by extracting text content from common block-level elements
+        doc.querySelectorAll('script, style').forEach((x) => x.remove());
+
+        const BLOCK_SELECTOR = 'p, div, li, h1, h2';
+        const paragraphs = doc.querySelectorAll(BLOCK_SELECTOR);
+        const blocks: string[] = [];
+
+        for (const el of paragraphs) {
+          //
+          // child block exists?
+          //
+          const childBlocks = el.querySelector(BLOCK_SELECTOR);
+
+          //
+          // skip container blocks
+          //
+          if (childBlocks) {
+            continue;
+          }
+
+          const text = el.textContent?.trim();
+
+          if (text) {
+            blocks.push(text);
+          }
+        }
+
+        if (blocks.length !== 0) {
+          sentenceListEl.value = blocks.join('\n\n');
+          doneHtmlParsing = true;
+        }
+      } catch (e) {
+        console.error('Error parsing HTML:', e);
+      }
+    } while (false);
+
+    if (!doneHtmlParsing) {
+      const text = inputEl.value.trim();
+      try {
+        let t = await invoke<string[]>('split_text', { text });
+        sentenceListEl.value = t.join('\n\n');
+      } catch (e) {
+        console.error('Error invoking split_text:', e);
+        alert('Failed to split text:\n\n' + String(e));
+      }
+    }
   });
 
   // Analyze Handler: Sends the sentences to the Rust backend for analysis
   analyzeBtn.addEventListener('click', async () => {
     const text = sentenceListEl.value;
-    const sentences = text
+    currentSentences = text
       .split(/\n{2,}/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    await invoke('open_analysis_window', { sentences });
+    await invoke('open_analysis_window', { sentences: currentSentences });
   });
 }
 

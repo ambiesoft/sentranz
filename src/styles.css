@@ -17,7 +17,8 @@ body {
 }
 
 .clear-btn,
-.paste-btn,
+.paste-html-btn,
+.paste-text-btn,
 .split-btn {
   padding: none;
   border: none;
@@ -33,8 +34,8 @@ body {
   height: 50%;
 }
 
-#inputText,
-#sentenceList {
+#input-text,
+#sentence-list {
   padding-top: 0;
   width: 100%;
   height: 100%;

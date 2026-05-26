@@ -4,20 +4,24 @@
       <div class="section-header">
         <h2 class="section-title">Input</h2>
         <select id="model-select"></select>
-        <button id="clearBtn">Clear</button>
-        <button id="pasteBtn">Paste</button>
-        <button id="splitBtn">Split Sentences</button>
+        <button id="clear-btn">Clear</button>
+        <button id="paste-html-btn">Paste HTML</button>
+        <button id="paste-text-btn">Paste Text</button>
+        <button id="split-btn">Split Sentences</button>
       </div>
-      <textarea id="inputText" placeholder="Paste text here..."></textarea>
+      <textarea
+        id="input-text"
+        placeholder="Paste plain text here..."
+      ></textarea>
     </section>
 
     <section class="split-section">
       <div class="section-header">
         <h2 class="section-title">Sentences</h2>
-        <button id="analyzeBtn">Open Analysis Window</button>
+        <button id="analyze-btn">Open Analysis Window</button>
       </div>
 
-      <textarea id="sentenceList"></textarea>
+      <textarea id="sentence-list"></textarea>
     </section>
   </main>
   <script type="module" src="/src/main.ts"></script>
