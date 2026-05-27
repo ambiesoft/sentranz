@@ -16,6 +16,7 @@ DEFAULT_JSON = '''
   "choices": [
     {
       "message": {
+        "role": "assistant",
         "content": ""
       }
     }
@@ -93,9 +94,10 @@ async def chat(req: ChatRequest):
         and request_count == args.Snj
     ):
 
-        json_obj = json.dumps(DEFAULT_JSON)
-        json_obj["choices"][0]["message"]["content"] = "THIS IS NOT JSON"
+        json_obj = json.loads(DEFAULT_JSON)
+        json_obj["choices"][0]["message"]["content"] = "DEBUG SEVER SEND THIS :THIS IS NOT JSON"
 
+        print(json.dumps(json_obj, indent=2))
         return json_obj
     #
     # missing field json
@@ -128,16 +130,26 @@ async def chat(req: ChatRequest):
     #
 
     if sentence_mode:
-        json_obj = json.loads(DEFAULT_JSON)
-        json_obj["choices"][0]["message"]["content"] = json.dumps({
-            "translation":        "これは翻訳です",
-            "summary_ja":                "日本語要約",
-            "summary_en":                "English summary",
-            "grammar_explanation":                "文法説明"
-        })
+        good_json = {
+            "translation": "翻訳だけ",
+            "summary_ja": "要約だけ",
+            "summary_en": "summary only",
+            "grammar_explanation": "grammar explanation only"
+        }
 
-        return json_obj
+        ret = {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content":
+                            json.dumps(good_json)
+                    }
+                }
+            ]
+        }
 
+        return ret
     #
     # normal ask
     #
@@ -148,6 +160,7 @@ async def chat(req: ChatRequest):
             "choices": [
                 {
                     "message": {
+                        "role": "assistant",
                         "content":
                             "これは Ask AI の返答です"
                     }
@@ -159,6 +172,7 @@ async def chat(req: ChatRequest):
         "choices": [
             {
                 "message": {
+                    "role": "assistant",
                     "content": "unknown request"
                 }
             }

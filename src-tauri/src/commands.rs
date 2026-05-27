@@ -11,11 +11,6 @@ use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use uuid::Uuid;
 
-// fn get_model() -> String {
-//     // return "qwen/qwen3-vl-4b".into();
-//     // return "openai/gpt-oss-20b".into();
-//     return "google/gemma-4-26b-a4b".into();
-// }
 fn extract_json(s: &str) -> Option<String> {
     let start = s.find('{')?;
     let end = s.rfind('}')?;
@@ -39,6 +34,16 @@ pub async fn get_available_models() -> Result<Vec<ModelInfo>, String> {
             id: "google/gemma-4-26b-a4b".into(),
             display_name: "Gemma 4 26B A4B".into(),
             provider: "Google".into(),
+        },
+        ModelInfo {
+            id: "bullerwins/translategemma-12b-it-GGUF".into(),
+            display_name: "TranslateGemma 12B IT GGUF".into(),
+            provider: "Bullerwins".into(),
+        },
+        ModelInfo {
+            id: "lmstudio-community/DeepSeek-R1-Distill-Qwen-14B-GGUF".into(),
+            display_name: "DeepSeek R1 Distill Qwen 14B GGUF".into(),
+            provider: "LM Studio Community".into(),
         },
     ])
 }

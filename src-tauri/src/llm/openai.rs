@@ -29,7 +29,13 @@ impl OpenAiProvider {
         #[cfg(debug_assertions)]
         println!("OpenAI response: {:?}", res);
 
-        let json: ChatResponse = res.json().await.map_err(|e| e.to_string())?;
+        let body = res.text().await.map_err(|e| e.to_string())?;
+
+        #[cfg(debug_assertions)]
+        println!("RAW RESPONSE:\n{}", body);
+
+        let json: ChatResponse = serde_json::from_str(&body)
+            .map_err(|e| format!("JSON parse error: {}\n\nBODY:\n{}", e, body))?;
 
         #[cfg(debug_assertions)]
         println!(

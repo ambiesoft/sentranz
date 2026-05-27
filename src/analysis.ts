@@ -56,11 +56,15 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function renderCurrentData() {
+function renderCurrentData(index: number) {
   if (states.length === 0) {
     return;
   }
 
+  if (index !== currentIndex) {
+    saveCurrentQA();
+    return;
+  }
   sentenceSelect.value = String(currentIndex);
   sentencePane.textContent = states[currentIndex].sentence;
 
@@ -134,7 +138,7 @@ async function init() {
     });
   }
 
-  renderCurrentData();
+  renderCurrentData(0);
 
   await appWindow.listen('sentence_ready', (event) => {
     console.log('Received sentence_ready event with payload:', event.payload);
@@ -144,21 +148,7 @@ async function init() {
     if (index >= 0) {
       states[index].sentenceResult = result;
     }
-    if (index === currentIndex) {
-      saveCurrentQA();
-      renderCurrentData();
-    }
-  });
-
-  await appWindow.listen('ask_ai_response', (event) => {
-    console.log('Received ask_ai_response event with payload:', event.payload);
-    const response = event.payload as AskAiResponse;
-    const index = response.index;
-    states[index].askAnswer = response.response;
-    if (index === currentIndex) {
-      renderCurrentData();
-    }
-    askBtn.disabled = false;
+    renderCurrentData(index);
   });
 
   await appWindow.listen('analysis_progress', (event) => {
@@ -168,9 +158,8 @@ async function init() {
     );
     const progress = event.payload as JobProgress;
     states[progress.index].progressMessage = progress.message;
-    if (progress.index === currentIndex) {
-      renderCurrentData();
-    }
+
+    renderCurrentData(progress.index);
   });
 
   await appWindow.listen('analysis_error', (event) => {
@@ -187,26 +176,32 @@ async function init() {
     if (error.raw_response) {
       console.error('Raw response from backend:', error.raw_response);
     }
-    if (error.index === currentIndex) {
-      states[error.index].sentenceResult = {
-        index: error.index,
-        original: states[error.index].sentence,
-        translation: `Error: ${error.message}`,
-        summary_ja: '',
-        summary_en: '',
-        grammar_explanation: '',
-      };
-      renderCurrentData();
-    }
+    states[error.index].sentenceResult = {
+      index: error.index,
+      original: states[error.index].sentence,
+      translation: `Error: ${error.message}\n\n${error.raw_response || ''}`,
+      summary_ja: '',
+      summary_en: '',
+      grammar_explanation: '',
+    };
+    renderCurrentData(error.index);
+  });
+
+  await appWindow.listen('ask_ai_response', (event) => {
+    console.log('Received ask_ai_response event with payload:', event.payload);
+    const response = event.payload as AskAiResponse;
+    const index = response.index;
+    states[index].askAnswer = response.response;
+    renderCurrentData(index);
+
+    askBtn.disabled = false;
   });
 
   await appWindow.listen('ask_ai_progress', (event) => {
     console.log('Received ask_ai_progress event with payload:', event.payload);
     const progress = event.payload as JobProgress;
     states[progress.index].askAnswer = progress.message;
-    if (progress.index === currentIndex) {
-      renderCurrentData();
-    }
+    renderCurrentData(progress.index);
   });
 
   await appWindow.listen('ask_ai_error', (event) => {
@@ -222,10 +217,9 @@ async function init() {
       'error.index:',
       error.index,
     );
-    if (error.index === currentIndex) {
-      states[error.index].askAnswer = `Error: ${error.message}`;
-      renderCurrentData();
-    }
+    states[error.index].askAnswer =
+      `Error: ${error.message}\n\n${error.raw_response || ''}`;
+    renderCurrentData(error.index);
     askBtn.disabled = false;
   });
 
@@ -253,7 +247,7 @@ prevBtn.addEventListener('click', () => {
     saveCurrentQA();
     currentIndex--;
 
-    renderCurrentData();
+    renderCurrentData(currentIndex);
   }
 });
 
@@ -262,14 +256,14 @@ nextBtn.addEventListener('click', () => {
     saveCurrentQA();
 
     currentIndex++;
-    renderCurrentData();
+    renderCurrentData(currentIndex);
   }
 });
 
 sentenceSelect.addEventListener('change', () => {
   saveCurrentQA();
   currentIndex = Number(sentenceSelect.value);
-  renderCurrentData();
+  renderCurrentData(currentIndex);
 });
 
 // Ask Handler: Sends the current sentence and the user's question to the Rust backend and displays the answer
@@ -279,9 +273,14 @@ askBtn.addEventListener('click', async () => {
     return;
   }
 
+  states[currentIndex].userQuestion = '';
+  askInput.value = '';
+
   const sentence = states[currentIndex].sentence;
   askAnswer.textContent = 'Waiting...';
   askBtn.disabled = true;
+
+  const indexSave = currentIndex;
 
   try {
     await invoke<AskAiResponse>('ask_ai', {
@@ -292,6 +291,10 @@ askBtn.addEventListener('click', async () => {
     });
   } catch (e) {
     alert('Failed to get answer:\n\n' + String(e));
+    states[indexSave].userQuestion = question;
+    if (indexSave === currentIndex && !askInput.value) {
+      askInput.value = question;
+    }
   }
 }); // End of askBtn click handler;
 
