@@ -1,7 +1,8 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
 use crate::models::{
-    AskAiResponse, JobError, JobProgress, LlmSentenceResponse, ModelInfo, SentenceResult,
+    AskAiResponse, JobError, JobProgress, LlmSentenceResponse, ModelInfo, QueueProgress,
+    SentenceResult,
 };
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::AppState;
@@ -59,9 +60,15 @@ pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
     loop {
         let job = {
             let mut queue = state.llm_queue.lock().unwrap();
-
             queue.pop_front()
         };
+        let remaining = {
+            let queue = state.llm_queue.lock().unwrap();
+            queue.len()
+        };
+
+        let progress = QueueProgress { total: remaining };
+        let _ = app.emit("queue_progress", progress);
 
         match job {
             Some(job) => {
@@ -271,19 +278,12 @@ Explain clearly and briefly."#,
 
 #[tauri::command]
 pub async fn analyze_text(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppState>,
     label: String,
     index: usize,
     sentence: String,
 ) -> Result<(), String> {
-    // let sentences = {
-    //     let sessions = state.sessions.lock().unwrap();
-    //     let session = sessions.get(&label).ok_or("session not found")?;
-    //     session.sentences.clone()
-    // };
-
-    //for (index, sentence) in sentences.into_iter().enumerate() {
     let job = LlmJob {
         _id: Uuid::new_v4(),
         window_label: label.clone(),
@@ -291,15 +291,19 @@ pub async fn analyze_text(
         kind: LlmJobKind::AnalyzeSentence { index, sentence },
     };
 
-    state.llm_queue.lock().unwrap().push_back(job);
-    //}
+    let mut queue = state.llm_queue.lock().unwrap();
+    queue.push_back(job);
+
+    let remaining = { queue.len() };
+    let progress = QueueProgress { total: remaining };
+    let _ = app.emit("queue_progress", progress);
 
     Ok(())
 }
 
 #[tauri::command]
 pub async fn ask_ai(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, AppState>,
     label: String,
     index: usize,
@@ -318,9 +322,12 @@ pub async fn ask_ai(
     };
 
     let mut queue = state.llm_queue.lock().unwrap();
-
     queue.push_front(job);
 
+    let remaining = { queue.len() };
+
+    let progress = QueueProgress { total: remaining };
+    let _ = app.emit("queue_progress", progress);
     Ok(())
 }
 

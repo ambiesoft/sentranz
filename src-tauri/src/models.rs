@@ -65,3 +65,8 @@ pub struct JobProgress {
     pub index: usize,
     pub message: String,
 }
+
+#[derive(Clone, Serialize)]
+pub struct QueueProgress {
+    pub total: usize,
+}

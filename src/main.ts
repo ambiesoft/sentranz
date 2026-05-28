@@ -255,5 +255,16 @@ async function init() {
   appWindow.onCloseRequested(async () => {
     saveState();
   });
+
+  appWindow.listen('queue_progress', async (event) => {
+    console.log('eee:', event);
+    const { total } = event.payload as {
+      total: number;
+    };
+
+    const title =
+      total === 0 ? 'Sentranz' : `${total} jobs remaining | Sentranz`;
+    await getCurrentWindow().setTitle(title);
+  });
 }
 init();
