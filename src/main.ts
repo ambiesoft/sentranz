@@ -3,6 +3,8 @@ console.log('main.ts loaded');
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { loadSessions, saveSession } from './session';
 
 type ModelInfo = {
   id: string;
@@ -22,7 +24,23 @@ const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
 const sentenceListEl =
   document.querySelector<HTMLTextAreaElement>('#sentence-list')!;
 
+const appWindow = getCurrentWindow();
+
 let currentSentences: string[] = [];
+
+let storeMain: Store;
+let saveTimer: number;
+
+async function saveState() {
+  await storeMain.set('inputText', inputEl.value);
+  await storeMain.set('sentenceList', sentenceListEl.value);
+
+  await storeMain.save();
+}
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveState, 1000);
+}
 
 async function setCurrentModel(modelId: string) {
   try {
@@ -34,7 +52,8 @@ async function setCurrentModel(modelId: string) {
 }
 
 async function init() {
-  const store = await Store.load('settings.json');
+  const storeSettings = await Store.load('settings.json');
+  storeMain = await Store.load('main.json');
 
   const models: ModelInfo[] = await invoke<ModelInfo[]>('get_available_models');
   console.log('Available models:', models);
@@ -46,7 +65,7 @@ async function init() {
     option.textContent = models[i].display_name;
     modelSelect.appendChild(option);
   }
-  const savedModel = await store.get<string>('current_model');
+  const savedModel = await storeSettings.get<string>('current_model');
   if (savedModel) {
     const idx = models.findIndex((x) => x.id === savedModel);
 
@@ -61,13 +80,37 @@ async function init() {
     setCurrentModel(models[0].id); // Set initial model
   }
 
+  // load analyses
+  const sessions = await loadSessions();
+  const openSessions = sessions.filter((s) => s.isOpen);
+  for (let session of openSessions) {
+    await invoke('open_analysis_window', {
+      sessionId: session.id,
+    });
+  }
+
   modelSelect.addEventListener('change', async () => {
     const selectedModel = models[modelSelect.selectedIndex];
     setCurrentModel(selectedModel.id);
-    await store.set('current_model', selectedModel.id);
+    await storeSettings.set('current_model', selectedModel.id);
 
-    await store.save();
+    await storeSettings.save();
   });
+
+  // load
+  const savedInput = await storeMain.get<string>('inputText');
+  if (savedInput) {
+    inputEl.value = savedInput;
+  }
+
+  const savedSentences = await storeMain.get<string>('sentenceList');
+  if (savedSentences) {
+    sentenceListEl.value = savedSentences;
+  }
+
+  // scheduled save
+  inputEl.addEventListener('input', scheduleSave);
+  sentenceListEl.addEventListener('input', scheduleSave);
 
   clearBtn.addEventListener('click', () => {
     inputEl.value = '';
@@ -185,8 +228,32 @@ async function init() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    await invoke('open_analysis_window', { sentences: currentSentences });
+    // await invoke('open_analysis_window', { sentences: currentSentences });
+
+    const sessionId = 'analysis-' + crypto.randomUUID();
+    const session = {
+      id: sessionId,
+
+      currentIndex: 0,
+
+      states: currentSentences.map((s) => ({
+        sentence: s,
+        sentenceResult: null,
+        userQuestion: '',
+        askAnswer: '',
+      })),
+      isOpen: true,
+    };
+
+    saveSession(session);
+
+    await invoke('open_analysis_window', {
+      sessionId,
+    });
+  });
+
+  appWindow.onCloseRequested(async () => {
+    saveState();
   });
 }
-
 init();

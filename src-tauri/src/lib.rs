@@ -7,7 +7,7 @@ mod text;
 
 use crate::commands::llm_worker_loop;
 use state::AppState;
-use tauri::Manager;
+use tauri::{Manager, WindowEvent};
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -16,7 +16,7 @@ use std::sync::Mutex;
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
-            sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            // sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
             current_model: Arc::new(Mutex::new(state::ModelConfig {
                 id: "".into(), //"google/gemma-4-26b-a4b".into(),
                 endpoint: "http://localhost:1234/v1/chat/completions".into(),
@@ -34,7 +34,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_analysis_window,
-            commands::get_session_sentences,
+            // commands::get_session_sentences,
             commands::analyze_text,
             commands::ask_ai,
             commands::split_text,
@@ -42,6 +42,29 @@ pub fn run() {
             commands::get_available_models,
             commands::window_focused,
         ])
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { .. } = event {
+                //
+                // main closed?
+                //
+                if window.label() == "main" {
+                    let app = window.app_handle();
+
+                    //
+                    // close all windows
+                    //
+                    // for (_, w) in app.webview_windows() {
+                    //     let _ = w.close();
+                    // }
+
+                    //
+                    // exit app
+                    //
+
+                    app.exit(0);
+                }
+            }
+        })
         .plugin(tauri_plugin_store::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

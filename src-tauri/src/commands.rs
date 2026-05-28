@@ -4,7 +4,7 @@ use crate::models::{
     AskAiResponse, JobError, JobProgress, LlmSentenceResponse, ModelInfo, SentenceResult,
 };
 use crate::models::{LlmJob, LlmJobKind};
-use crate::state::{AnalysisSession, AppState};
+use crate::state::AppState;
 use crate::text::splitter::split_sentences;
 use std::time::Duration;
 use tauri::State;
@@ -274,23 +274,25 @@ pub async fn analyze_text(
     _app: AppHandle,
     state: State<'_, AppState>,
     label: String,
+    index: usize,
+    sentence: String,
 ) -> Result<(), String> {
-    let sentences = {
-        let sessions = state.sessions.lock().unwrap();
-        let session = sessions.get(&label).ok_or("session not found")?;
-        session.sentences.clone()
+    // let sentences = {
+    //     let sessions = state.sessions.lock().unwrap();
+    //     let session = sessions.get(&label).ok_or("session not found")?;
+    //     session.sentences.clone()
+    // };
+
+    //for (index, sentence) in sentences.into_iter().enumerate() {
+    let job = LlmJob {
+        _id: Uuid::new_v4(),
+        window_label: label.clone(),
+        _priority: 100,
+        kind: LlmJobKind::AnalyzeSentence { index, sentence },
     };
 
-    for (index, sentence) in sentences.into_iter().enumerate() {
-        let job = LlmJob {
-            _id: Uuid::new_v4(),
-            window_label: label.clone(),
-            _priority: 100,
-            kind: LlmJobKind::AnalyzeSentence { index, sentence },
-        };
-
-        state.llm_queue.lock().unwrap().push_back(job);
-    }
+    state.llm_queue.lock().unwrap().push_back(job);
+    //}
 
     Ok(())
 }
@@ -325,45 +327,47 @@ pub async fn ask_ai(
 #[tauri::command]
 pub async fn open_analysis_window(
     app: AppHandle,
-    state: State<'_, AppState>,
-    sentences: Vec<String>,
+    // state: State<'_, AppState>,
+    session_id: String,
 ) -> Result<(), String> {
-    let label = format!("analysis-{}", uuid::Uuid::new_v4());
+    // let label = format!("analysis-{}", uuid::Uuid::new_v4());
+    // let label = format!("analysis-{}", session_id);
+    // {
+    //     let mut sessions = state.sessions.lock().unwrap();
+    //     sessions.insert(label.clone(), AnalysisSession {  });
+    // }
 
-    {
-        let mut sessions = state.sessions.lock().unwrap();
-        sessions.insert(label.clone(), AnalysisSession { sentences });
-    }
-
-    let window =
-        WebviewWindowBuilder::new(&app, label.clone(), WebviewUrl::App("analysis.html".into()))
-            .title(label.clone())
-            // .devtools(true)
-            .build()
-            .map_err(|e| e.to_string())?;
+    let window = WebviewWindowBuilder::new(
+        &app,
+        session_id.clone(),
+        WebviewUrl::App("analysis.html".into()),
+    )
+    .title(session_id.clone())
+    // .devtools(true)
+    .build()
+    .map_err(|e| e.to_string())?;
 
     let state = app.state::<AppState>().inner().clone();
-    let label_clone = label.clone();
 
     // Clean up session and pending jobs when window is closed
     window.on_window_event(move |event| {
         if let tauri::WindowEvent::Destroyed = event {
             let mut queue = state.llm_queue.lock().unwrap();
-            queue.retain(|job| job.window_label != label_clone);
-            println!("cleaned queue for {}", label_clone);
+            queue.retain(|job| job.window_label != session_id.clone());
+            println!("cleaned queue for {}", session_id);
         }
     });
 
     Ok(())
 }
 
-#[tauri::command]
-pub fn get_session_sentences(state: State<AppState>, label: String) -> Result<Vec<String>, String> {
-    let sessions = state.sessions.lock().unwrap();
-    let session = sessions.get(&label).ok_or("session not found")?;
+// #[tauri::command]
+// pub fn get_session_sentences(state: State<AppState>, label: String) -> Result<Vec<String>, String> {
+//     let sessions = state.sessions.lock().unwrap();
+//     let session = sessions.get(&label).ok_or("session not found")?;
 
-    Ok(session.sentences.clone())
-}
+//     Ok(session.sentences.clone())
+// }
 
 #[tauri::command]
 pub fn split_text(text: String) -> Vec<String> {
