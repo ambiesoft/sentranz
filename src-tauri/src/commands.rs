@@ -7,6 +7,7 @@ use crate::models::{
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::AppState;
 use crate::text::splitter::split_sentences;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -56,39 +57,46 @@ pub async fn set_current_model(state: State<'_, AppState>, model_id: String) -> 
     Ok(())
 }
 
-pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
+pub async fn llm_analysis_loop(app: AppHandle, state: AppState) {
     loop {
-        {
-            let mut queue = state.llm_ask_queue.lock().unwrap();
-            let job = queue.pop_front();
+        if state.ask_running.load(Ordering::SeqCst) {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            continue;
+        }
+        let job = {
+            let mut queue = state.llm_analysis_queue.lock().unwrap();
+            queue.pop_front()
+        };
 
-            emit_remaining_task_count(&app, &state);
+        match job {
+            Some(job) => {
+                emit_remaining_task_count(&app, &state);
+                process_job(&app, &state, job).await;
+            }
 
-            match job {
-                Some(job) => {
-                    process_job(&app, &state, job).await;
-                    continue;
-                }
-
-                None => {
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
             }
         }
-        {
-            let mut queue = state.llm_analysis_queue.lock().unwrap();
-            let job = queue.pop_front();
+    }
+}
+pub async fn llm_ask_loop(app: AppHandle, state: AppState) {
+    loop {
+        let job = {
+            let mut queue = state.llm_ask_queue.lock().unwrap();
+            queue.pop_front()
+        };
 
-            emit_remaining_task_count(&app, &state);
+        match job {
+            Some(job) => {
+                emit_remaining_task_count(&app, &state);
+                state.ask_running.store(true, Ordering::SeqCst);
+                process_job(&app, &state, job).await;
+                state.ask_running.store(false, Ordering::SeqCst);
+            }
 
-            match job {
-                Some(job) => {
-                    process_job(&app, &state, job).await;
-                }
-
-                None => {
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
             }
         }
     }

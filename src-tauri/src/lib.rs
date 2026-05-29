@@ -5,10 +5,11 @@ mod models;
 mod state;
 mod text;
 
-use crate::commands::llm_worker_loop;
+use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
 use tauri::{Manager, WindowEvent};
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -24,14 +25,18 @@ pub fn run() {
             })),
             llm_analysis_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             llm_ask_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
+            ask_running: Arc::new(AtomicBool::new(false)),
         })
         .setup(|app| {
             let app_handle = app.handle().clone();
             let state = app.state::<AppState>().inner().clone();
-            std::thread::spawn(move || {
-                tauri::async_runtime::block_on(async {
-                    llm_worker_loop(app_handle, state).await;
-                });
+            let app_handle2 = app_handle.clone();
+            let state2 = state.clone();
+            tauri::async_runtime::spawn(async move {
+                llm_analysis_loop(app_handle, state).await;
+            });
+            tauri::async_runtime::spawn(async move {
+                llm_ask_loop(app_handle2, state2).await;
             });
             Ok(())
         })
