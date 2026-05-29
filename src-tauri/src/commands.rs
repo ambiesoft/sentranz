@@ -58,25 +58,37 @@ pub async fn set_current_model(state: State<'_, AppState>, model_id: String) -> 
 
 pub async fn llm_worker_loop(app: AppHandle, state: AppState) {
     loop {
-        let job = {
-            let mut queue = state.llm_queue.lock().unwrap();
-            queue.pop_front()
-        };
-        let remaining = {
-            let queue = state.llm_queue.lock().unwrap();
-            queue.len()
-        };
+        {
+            let mut queue = state.llm_ask_queue.lock().unwrap();
+            let job = queue.pop_front();
 
-        let progress = QueueProgress { total: remaining };
-        let _ = app.emit("queue_progress", progress);
+            emit_remaining_task_count(&app, &state);
 
-        match job {
-            Some(job) => {
-                process_job(&app, &state, job).await;
+            match job {
+                Some(job) => {
+                    process_job(&app, &state, job).await;
+                    continue;
+                }
+
+                None => {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
             }
+        }
+        {
+            let mut queue = state.llm_analysis_queue.lock().unwrap();
+            let job = queue.pop_front();
 
-            None => {
-                tokio::time::sleep(Duration::from_millis(100)).await;
+            emit_remaining_task_count(&app, &state);
+
+            match job {
+                Some(job) => {
+                    process_job(&app, &state, job).await;
+                }
+
+                None => {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
             }
         }
     }
@@ -291,7 +303,7 @@ pub async fn analyze_text(
         kind: LlmJobKind::AnalyzeSentence { index, sentence },
     };
 
-    let mut queue = state.llm_queue.lock().unwrap();
+    let mut queue = state.llm_analysis_queue.lock().unwrap();
     queue.push_back(job);
 
     let remaining = { queue.len() };
@@ -301,6 +313,15 @@ pub async fn analyze_text(
     Ok(())
 }
 
+fn emit_remaining_task_count(app: &AppHandle, state: &AppState) {
+    let queue_analysis = state.llm_analysis_queue.lock().unwrap();
+    let queue_ask = state.llm_ask_queue.lock().unwrap();
+
+    let remaining = { queue_analysis.len() + queue_ask.len() };
+
+    let progress = QueueProgress { total: remaining };
+    let _ = app.emit("queue_progress", progress);
+}
 #[tauri::command]
 pub async fn ask_ai(
     app: AppHandle,
@@ -321,7 +342,7 @@ pub async fn ask_ai(
         },
     };
 
-    let mut queue = state.llm_queue.lock().unwrap();
+    let mut queue = state.llm_ask_queue.lock().unwrap();
     queue.push_front(job);
 
     let remaining = { queue.len() };
@@ -359,8 +380,11 @@ pub async fn open_analysis_window(
     // Clean up session and pending jobs when window is closed
     window.on_window_event(move |event| {
         if let tauri::WindowEvent::Destroyed = event {
-            let mut queue = state.llm_queue.lock().unwrap();
-            queue.retain(|job| job.window_label != session_id.clone());
+            let mut queue_analysis = state.llm_analysis_queue.lock().unwrap();
+            queue_analysis.retain(|job| job.window_label != session_id.clone());
+
+            let mut queue_ask = state.llm_ask_queue.lock().unwrap();
+            queue_ask.retain(|job| job.window_label != session_id.clone());
             println!("cleaned queue for {}", session_id);
         }
     });
@@ -383,7 +407,7 @@ pub fn split_text(text: String) -> Vec<String> {
 
 #[tauri::command]
 pub fn window_focused(state: State<AppState>, label: String) {
-    let mut queue = state.llm_queue.lock().unwrap();
+    let mut queue = state.llm_analysis_queue.lock().unwrap();
 
     //
     // focused window jobs first

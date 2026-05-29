@@ -13,7 +13,8 @@ use std::sync::Mutex;
 pub struct AppState {
     // pub sessions: Arc<Mutex<HashMap<String, AnalysisSession>>>,
     pub current_model: Arc<Mutex<ModelConfig>>,
-    pub llm_queue: Arc<Mutex<VecDeque<LlmJob>>>,
+    pub llm_analysis_queue: Arc<Mutex<VecDeque<LlmJob>>>,
+    pub llm_ask_queue: Arc<Mutex<VecDeque<LlmJob>>>,
 }
 
 #[derive(Clone)]

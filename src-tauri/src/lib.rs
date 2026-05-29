@@ -22,13 +22,16 @@ pub fn run() {
                 endpoint: "http://localhost:1234/v1/chat/completions".into(),
                 api_key: None,
             })),
-            llm_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
+            llm_analysis_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
+            llm_ask_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
         })
         .setup(|app| {
             let app_handle = app.handle().clone();
             let state = app.state::<AppState>().inner().clone();
-            tauri::async_runtime::spawn(async move {
-                llm_worker_loop(app_handle, state).await;
+            std::thread::spawn(move || {
+                tauri::async_runtime::block_on(async {
+                    llm_worker_loop(app_handle, state).await;
+                });
             });
             Ok(())
         })
