@@ -4,7 +4,7 @@ import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { loadSessions, saveSession } from './session';
+import { loadSessions, saveSession } from './analysisStore';
 
 type ModelInfo = {
   id: string;

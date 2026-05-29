@@ -3,7 +3,7 @@ import './analysis.css';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SentenceResult, AnalysisSession } from './type';
-import { loadSession, saveSession } from './session';
+import { loadSession, saveSession } from './analysisStore';
 
 type AskAiResponse = {
   index: number;
@@ -128,7 +128,11 @@ async function init() {
   // let sentences = await invoke<string[]>('get_session_sentences', { label });
 
   console.log('Analysis init with label:', label);
-  session = await loadSession(label);
+  const loadedSession = await loadSession(label);
+  if (!loadedSession) {
+    throw new Error('Failed to load analysis session');
+  }
+  session = loadedSession;
   console.log('session loaded:', session);
 
   // create option combobox
