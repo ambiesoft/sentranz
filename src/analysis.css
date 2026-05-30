@@ -27,14 +27,15 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-
   padding: 8px;
-
   border-bottom: 1px solid #ccc;
-
   flex-shrink: 0;
 }
-
+.toolbar-right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
 .content {
   display: flex;
 
