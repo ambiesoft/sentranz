@@ -9,6 +9,7 @@ pub struct SentenceResult {
     pub summary_ja: String,
     pub summary_en: String,
     pub grammar_explanation: String,
+    pub analysis_error: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

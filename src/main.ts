@@ -228,8 +228,6 @@ async function init() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    // await invoke('open_analysis_window', { sentences: currentSentences });
-
     const sessionId = 'analysis-' + crypto.randomUUID();
     const session = {
       id: sessionId,

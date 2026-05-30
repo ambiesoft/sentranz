@@ -215,6 +215,7 @@ Sentence:
                     summary_ja: parsed.summary_ja,
                     summary_en: parsed.summary_en,
                     grammar_explanation: parsed.grammar_explanation,
+                    analysis_error: "".into(),
                 };
 
                 let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);

@@ -5,6 +5,7 @@ export type SentenceResult = {
   summary_ja: string;
   summary_en: string;
   grammar_explanation: string;
+  analysis_error: string;
 };
 export type State = {
   sentence: string;
