@@ -82,7 +82,7 @@ async function init() {
 
   // load analyses
   const sessions = await loadSessions();
-  const openSessions = sessions.filter((s) => s.isOpen);
+  const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
     await invoke('open_analysis_window', {
       sessionId: session.id,
@@ -255,7 +255,6 @@ async function init() {
   });
 
   appWindow.listen('queue_progress', async (event) => {
-    console.log('eee:', event);
     const { total } = event.payload as {
       total: number;
     };
