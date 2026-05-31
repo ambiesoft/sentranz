@@ -257,8 +257,15 @@ async function init() {
     });
   });
 
+  console.log('appWindow.onCloseRequested');
+  let count = 0;
+  let shutdownSaved = false;
   appWindow.onCloseRequested(async () => {
-    await saveState();
+    if (!shutdownSaved) {
+      console.log('aaa', ++count);
+      shutdownSaved = true;
+      await saveState();
+    }
   });
 
   appWindow.listen('queue_progress', async (event) => {

@@ -172,6 +172,8 @@ async function init() {
 } // End of init function
 
 async function registerListers() {
+  console.log('registerListers');
+
   await appWindow.listen('sentence_ready', (event) => {
     console.log('Received sentence_ready event with payload:', event.payload);
     const result = event.payload as SentenceResult;
@@ -329,6 +331,8 @@ function saveCurrentQA() {
 }
 
 async function registerDOMEvents() {
+  console.log('registerDOMEvents');
+
   askInput.addEventListener('change', scheduleSave);
   wordInfo.addEventListener('change', scheduleSave);
   askAnswer.addEventListener('change', scheduleSave);
@@ -405,6 +409,8 @@ async function registerDOMEvents() {
 }
 
 async function registerWindowEvents() {
+  console.log('registerWindowEvents');
+
   await appWindow.onFocusChanged(async ({ payload }) => {
     if (payload) {
       await invoke('window_focused', {
@@ -413,10 +419,17 @@ async function registerWindowEvents() {
     }
   });
 
+  let shutdownSaved = false;
+  let count = 0;
+  console.log('appWindow.onCloseRequested');
   await appWindow.onCloseRequested(async () => {
     const shuttingDown = await invoke<boolean>('is_shutting_down');
     session.isOpen = shuttingDown;
-    await saveSession(session);
+    if (!shutdownSaved) {
+      shutdownSaved = true;
+      console.log('count:', ++count);
+      await saveSession(session);
+    }
   });
 
   await appWindow.onResized(async ({ payload }) => {
