@@ -21,7 +21,6 @@ type JobError = {
 
 const sentencePane = document.querySelector('#sentence-pane')!;
 const wordInfo = document.querySelector('#word-info')!;
-
 const prevBtn = document.querySelector('#prev-btn') as HTMLButtonElement;
 const nextBtn = document.querySelector('#next-btn') as HTMLButtonElement;
 const retryBtn = document.querySelector('#retry-btn') as HTMLButtonElement;
@@ -45,12 +44,8 @@ const askAnswer = document.querySelector('#ask-answer') as HTMLDivElement;
 
 const appWindow = getCurrentWindow();
 const label = appWindow.label;
-console.log('Current window label:', label);
-
 let saveTimer: number;
-
-// let currentIndex = 0;
-// let states: State[] = [];
+let resizeTimer: number | undefined;
 
 let session: AnalysisSession;
 
@@ -404,13 +399,32 @@ appWindow.onFocusChanged(async ({ payload }) => {
   }
 
   appWindow.onCloseRequested(async () => {
-    session.isOpen = false;
+    console.log('onCloseReq');
+    const shuttingDown = await invoke<boolean>('is_shutting_down');
+    if (!shuttingDown) {
+      session.isOpen = false;
+    }
 
     await saveSession(session);
   });
 
   errorCloseBtn.addEventListener('click', () => {
     hideError();
+  });
+
+  await appWindow.onResized(async ({ payload }) => {
+    const scale = await appWindow.scaleFactor();
+    session.width = payload.width / scale;
+    session.height = payload.height / scale;
+    // const size = await appWindow.innerSize();
+    // session.width = size.width;
+    // session.height = size.height;
+
+    clearTimeout(resizeTimer);
+
+    resizeTimer = window.setTimeout(() => {
+      saveSession(session);
+    }, 500);
   });
 });
 init();

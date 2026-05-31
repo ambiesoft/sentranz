@@ -10,6 +10,7 @@ use state::AppState;
 use tauri::{Manager, WindowEvent};
 
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -26,6 +27,7 @@ pub fn run() {
             llm_analysis_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             llm_ask_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             ask_running: Arc::new(AtomicBool::new(false)),
+            shutting_down: Arc::new(AtomicBool::new(false)),
         })
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -49,27 +51,21 @@ pub fn run() {
             commands::set_current_model,
             commands::get_available_models,
             commands::window_focused,
+            commands::is_shutting_down,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { .. } = event {
+                let app = window.app_handle();
+                let state = app.state::<AppState>();
+                state.shutting_down.store(true, Ordering::SeqCst);
                 //
                 // main closed?
                 //
                 if window.label() == "main" {
-                    let app = window.app_handle();
-
-                    //
                     // close all windows
-                    //
-                    // for (_, w) in app.webview_windows() {
-                    //     let _ = w.close();
-                    // }
-
-                    //
-                    // exit app
-                    //
-
-                    app.exit(0);
+                    for (_, w) in app.webview_windows() {
+                        let _ = w.close();
+                    }
                 }
             }
         })

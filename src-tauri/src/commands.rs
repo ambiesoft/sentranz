@@ -366,20 +366,16 @@ pub async fn open_analysis_window(
     app: AppHandle,
     // state: State<'_, AppState>,
     session_id: String,
+    width: f64,
+    height: f64,
 ) -> Result<(), String> {
-    // let label = format!("analysis-{}", uuid::Uuid::new_v4());
-    // let label = format!("analysis-{}", session_id);
-    // {
-    //     let mut sessions = state.sessions.lock().unwrap();
-    //     sessions.insert(label.clone(), AnalysisSession {  });
-    // }
-
     let window = WebviewWindowBuilder::new(
         &app,
         session_id.clone(),
         WebviewUrl::App("analysis.html".into()),
     )
     .title(session_id.clone())
+    .inner_size(width, height)
     // .devtools(true)
     .build()
     .map_err(|e| e.to_string())?;
@@ -442,4 +438,9 @@ pub fn window_focused(state: State<AppState>, label: String) {
     for job in others {
         queue.push_back(job);
     }
+}
+
+#[tauri::command]
+pub fn is_shutting_down(state: State<AppState>) -> bool {
+    state.shutting_down.load(Ordering::SeqCst)
 }

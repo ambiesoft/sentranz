@@ -20,4 +20,6 @@ export type AnalysisSession = {
   currentIndex: number;
   states: State[];
   isOpen: boolean;
+  width?: number;
+  height?: number;
 };

@@ -84,8 +84,13 @@ async function init() {
   const sessions = await loadSessions();
   const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
+    let width = session.width ?? 1200.0;
+    let height = session.height ?? 800.0;
+    console.log('eee', width, height);
     await invoke('open_analysis_window', {
       sessionId: session.id,
+      width,
+      height,
     });
   }
 
@@ -247,11 +252,13 @@ async function init() {
 
     await invoke('open_analysis_window', {
       sessionId,
+      width: 800,
+      height: 600,
     });
   });
 
   appWindow.onCloseRequested(async () => {
-    saveState();
+    await saveState();
   });
 
   appWindow.listen('queue_progress', async (event) => {
