@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 import json
+import time
 
 app = FastAPI()
 
@@ -45,7 +46,8 @@ def is_ask_request(text: str) -> bool:
 
 @app.post("/v1/chat/completions")
 async def chat(req: ChatRequest):
-
+    time.sleep(10)
+	
     global request_count
     request_count += 1
 
