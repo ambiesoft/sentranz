@@ -55,10 +55,6 @@ function scheduleSave() {
     await saveSession(session);
   }, 500);
 }
-askInput.addEventListener('change', scheduleSave);
-wordInfo.addEventListener('change', scheduleSave);
-askAnswer.addEventListener('change', scheduleSave);
-
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -143,7 +139,12 @@ function renderCurrentData(index: number) {
 }
 
 async function init() {
-  console.log('Analysis init with label:', label);
+  console.log('init() starts, Analysis init with label:', label);
+
+  await registerDOMEvents();
+  await registerWindowEvents();
+  await registerListers();
+
   const loadedSession = await loadSession(label);
   if (!loadedSession) {
     throw new Error('Failed to load analysis session');
@@ -167,6 +168,10 @@ async function init() {
 
   renderCurrentData(session.currentIndex);
 
+  startAnalyze(0, -1, false);
+} // End of init function
+
+async function registerListers() {
   await appWindow.listen('sentence_ready', (event) => {
     console.log('Received sentence_ready event with payload:', event.payload);
     const result = event.payload as SentenceResult;
@@ -258,9 +263,7 @@ async function init() {
     renderCurrentData(error.index);
     askBtn.disabled = false;
   });
-
-  startAnalyze(0, -1, false);
-} // End of init function
+}
 
 async function startAnalyze(
   startIndex: number,
@@ -324,101 +327,102 @@ function saveCurrentQA() {
   const currentQuestion = askInput.value.trim();
   session.states[session.currentIndex].userQuestion = currentQuestion;
 }
-prevBtn.addEventListener('click', () => {
-  if (session.currentIndex > 0) {
-    saveCurrentQA();
-    session.currentIndex--;
 
-    renderCurrentData(session.currentIndex);
-    scheduleSave();
-  }
-});
+async function registerDOMEvents() {
+  askInput.addEventListener('change', scheduleSave);
+  wordInfo.addEventListener('change', scheduleSave);
+  askAnswer.addEventListener('change', scheduleSave);
 
-nextBtn.addEventListener('click', () => {
-  if (session.currentIndex < session.states.length - 1) {
-    saveCurrentQA();
+  prevBtn.addEventListener('click', () => {
+    if (session.currentIndex > 0) {
+      saveCurrentQA();
+      session.currentIndex--;
 
-    session.currentIndex++;
-    renderCurrentData(session.currentIndex);
-    scheduleSave();
-  }
-});
-
-sentenceSelect.addEventListener('change', () => {
-  saveCurrentQA();
-  session.currentIndex = Number(sentenceSelect.value);
-  renderCurrentData(session.currentIndex);
-});
-
-retryBtn.addEventListener('click', () => {
-  session.states[session.currentIndex].progressMessage = '';
-  session.states[session.currentIndex].sentenceResult = null;
-  startAnalyze(session.currentIndex, 1, false);
-});
-retryAllErrorsBtn.addEventListener('click', () => {
-  startAnalyze(0, -1, true);
-});
-
-// Ask Handler: Sends the current sentence and the user's question to the Rust backend and displays the answer
-askBtn.addEventListener('click', async () => {
-  const question = askInput.value.trim();
-  if (!question) {
-    return;
-  }
-
-  session.states[session.currentIndex].userQuestion = '';
-  askInput.value = '';
-
-  const sentence = session.states[session.currentIndex].sentence;
-  askAnswer.textContent = 'Waiting...';
-  askBtn.disabled = true;
-
-  const indexSave = session.currentIndex;
-
-  try {
-    await invoke<AskAiResponse>('ask_ai', {
-      label,
-      index: session.currentIndex,
-      sentence,
-      question,
-    });
-  } catch (e) {
-    alert('Failed to get answer:\n\n' + String(e));
-    session.states[indexSave].userQuestion = question;
-    if (indexSave === session.currentIndex && !askInput.value) {
-      askInput.value = question;
+      renderCurrentData(session.currentIndex);
+      scheduleSave();
     }
-  }
-}); // End of askBtn click handler;
+  });
 
-appWindow.onFocusChanged(async ({ payload }) => {
-  if (payload) {
-    await invoke('window_focused', {
-      label: appWindow.label,
-    });
-  }
+  nextBtn.addEventListener('click', () => {
+    if (session.currentIndex < session.states.length - 1) {
+      saveCurrentQA();
 
-  appWindow.onCloseRequested(async () => {
-    console.log('onCloseReq');
-    const shuttingDown = await invoke<boolean>('is_shutting_down');
-    if (!shuttingDown) {
-      session.isOpen = false;
+      session.currentIndex++;
+      renderCurrentData(session.currentIndex);
+      scheduleSave();
     }
+  });
 
-    await saveSession(session);
+  sentenceSelect.addEventListener('change', () => {
+    saveCurrentQA();
+    session.currentIndex = Number(sentenceSelect.value);
+    renderCurrentData(session.currentIndex);
+  });
+
+  retryBtn.addEventListener('click', () => {
+    session.states[session.currentIndex].progressMessage = '';
+    session.states[session.currentIndex].sentenceResult = null;
+    startAnalyze(session.currentIndex, 1, false);
+  });
+  retryAllErrorsBtn.addEventListener('click', () => {
+    startAnalyze(0, -1, true);
   });
 
   errorCloseBtn.addEventListener('click', () => {
     hideError();
   });
 
+  askBtn.addEventListener('click', async () => {
+    const question = askInput.value.trim();
+    if (!question) {
+      return;
+    }
+
+    session.states[session.currentIndex].userQuestion = '';
+    askInput.value = '';
+
+    const sentence = session.states[session.currentIndex].sentence;
+    askAnswer.textContent = 'Waiting...';
+    askBtn.disabled = true;
+
+    const indexSave = session.currentIndex;
+
+    try {
+      await invoke<AskAiResponse>('ask_ai', {
+        label,
+        index: session.currentIndex,
+        sentence,
+        question,
+      });
+    } catch (e) {
+      alert('Failed to get answer:\n\n' + String(e));
+      session.states[indexSave].userQuestion = question;
+      if (indexSave === session.currentIndex && !askInput.value) {
+        askInput.value = question;
+      }
+    }
+  }); // End of askBtn click handler;
+}
+
+async function registerWindowEvents() {
+  await appWindow.onFocusChanged(async ({ payload }) => {
+    if (payload) {
+      await invoke('window_focused', {
+        label: appWindow.label,
+      });
+    }
+  });
+
+  await appWindow.onCloseRequested(async () => {
+    const shuttingDown = await invoke<boolean>('is_shutting_down');
+    session.isOpen = shuttingDown;
+    await saveSession(session);
+  });
+
   await appWindow.onResized(async ({ payload }) => {
     const scale = await appWindow.scaleFactor();
     session.width = payload.width / scale;
     session.height = payload.height / scale;
-    // const size = await appWindow.innerSize();
-    // session.width = size.width;
-    // session.height = size.height;
 
     clearTimeout(resizeTimer);
 
@@ -426,5 +430,5 @@ appWindow.onFocusChanged(async ({ payload }) => {
       saveSession(session);
     }, 500);
   });
-});
+} // registerWindowEvents
 init();

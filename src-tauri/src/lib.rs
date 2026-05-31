@@ -57,12 +57,12 @@ pub fn run() {
             if let WindowEvent::CloseRequested { .. } = event {
                 let app = window.app_handle();
                 let state = app.state::<AppState>();
-                state.shutting_down.store(true, Ordering::SeqCst);
                 //
                 // main closed?
                 //
                 if window.label() == "main" {
                     // close all windows
+                    state.shutting_down.store(true, Ordering::SeqCst);
                     for (_, w) in app.webview_windows() {
                         let _ = w.close();
                     }
