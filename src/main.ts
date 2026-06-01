@@ -4,7 +4,7 @@ import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { loadSessions, saveSession } from './analysisStore';
+import { loadSession, loadSessions, saveSession } from './analysisStore';
 
 type ModelInfo = {
   id: string;
@@ -257,15 +257,15 @@ async function init() {
     });
   });
 
-  console.log('appWindow.onCloseRequested');
-  let count = 0;
-  let shutdownSaved = false;
-  appWindow.onCloseRequested(async () => {
-    if (!shutdownSaved) {
-      console.log('aaa', ++count);
-      shutdownSaved = true;
-      await saveState();
-    }
+  // let count = 0;
+  // let shutdownSaved = false;
+  appWindow.onCloseRequested(async (event) => {
+    event.preventDefault();
+    // if (!shutdownSaved) {
+    //   console.log('aaa', ++count);
+    //   shutdownSaved = true;
+    //   await saveState();
+    // }
   });
 
   appWindow.listen('queue_progress', async (event) => {
@@ -276,6 +276,24 @@ async function init() {
     const title =
       total === 0 ? 'Sentranz' : `${total} jobs remaining | Sentranz`;
     await getCurrentWindow().setTitle(title);
+  });
+
+  appWindow.listen('analysys_closed', async (event) => {
+    const label = event.payload as string;
+    let ses = await loadSession(label);
+    if (!ses) {
+      console.log('ses is null');
+      return;
+    }
+    ses.isOpen = false;
+    saveSession(ses);
+  });
+
+  appWindow.listen('will_close', async () => {
+    setTimeout(async () => {
+      await saveState();
+      await invoke('exit_app');
+    }, 1000);
   });
 }
 init();

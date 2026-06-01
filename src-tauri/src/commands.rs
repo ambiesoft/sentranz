@@ -444,3 +444,8 @@ pub fn window_focused(state: State<AppState>, label: String) {
 pub fn is_shutting_down(state: State<AppState>) -> bool {
     state.shutting_down.load(Ordering::SeqCst)
 }
+
+#[tauri::command]
+pub fn exit_app(app: AppHandle) {
+    app.exit(0);
+}

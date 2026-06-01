@@ -419,18 +419,18 @@ async function registerWindowEvents() {
     }
   });
 
-  let shutdownSaved = false;
-  let count = 0;
-  console.log('appWindow.onCloseRequested');
-  await appWindow.onCloseRequested(async () => {
-    const shuttingDown = await invoke<boolean>('is_shutting_down');
-    session.isOpen = shuttingDown;
-    if (!shutdownSaved) {
-      shutdownSaved = true;
-      console.log('count:', ++count);
-      await saveSession(session);
-    }
-  });
+  // let shutdownSaved = false;
+  // let count = 0;
+  // console.log('appWindow.onCloseRequested');
+  // await appWindow.onCloseRequested(async () => {
+  //   const shuttingDown = await invoke<boolean>('is_shutting_down');
+  //   session.isOpen = shuttingDown;
+  //   if (!shutdownSaved) {
+  //     shutdownSaved = true;
+  //     console.log('count:', ++count);
+  //     await saveSession(session);
+  //   }
+  // });
 
   await appWindow.onResized(async ({ payload }) => {
     const scale = await appWindow.scaleFactor();

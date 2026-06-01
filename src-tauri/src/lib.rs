@@ -7,10 +7,9 @@ mod text;
 
 use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -52,20 +51,25 @@ pub fn run() {
             commands::get_available_models,
             commands::window_focused,
             commands::is_shutting_down,
+            commands::exit_app,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { .. } = event {
                 let app = window.app_handle();
-                let state = app.state::<AppState>();
+                // let state = app.state::<AppState>();
                 //
                 // main closed?
                 //
                 if window.label() == "main" {
                     // close all windows
-                    state.shutting_down.store(true, Ordering::SeqCst);
-                    for (_, w) in app.webview_windows() {
-                        let _ = w.close();
-                    }
+                    // state.shutting_down.store(true, Ordering::SeqCst);
+                    // for (_, w) in app.webview_windows() {
+                    //     let _ = w.close();
+                    // }
+                    let _ = app.emit("will_close", ());
+                } else {
+                    // analysis window
+                    let _ = app.emit("analysys_closed", window.label());
                 }
             }
         })
