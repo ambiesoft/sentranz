@@ -1,5 +1,4 @@
 import argparse
-import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
@@ -37,17 +36,17 @@ class ChatRequest(BaseModel):
 
 
 def is_sentence_request(text: str) -> bool:
-    return "Translate the sentence" in text
+    return not is_ask_request(text)
 
 
 def is_ask_request(text: str) -> bool:
-    return "User question:" in text
+    return "You are an English reading tutor." in text
 
 
 @app.post("/v1/chat/completions")
 async def chat(req: ChatRequest):
-    time.sleep(10)
-	
+    time.sleep(1)
+
     global request_count
     request_count += 1
 
@@ -87,65 +86,15 @@ async def chat(req: ChatRequest):
         )
 
     #
-    # invalid json
-    #
-
-    if (
-        sentence_mode
-        and args.Snj
-        and request_count == args.Snj
-    ):
-
-        json_obj = json.loads(DEFAULT_JSON)
-        json_obj["choices"][0]["message"]["content"] = "DEBUG SEVER SEND THIS :THIS IS NOT JSON"
-
-        print(json.dumps(json_obj, indent=2))
-        return json_obj
-    #
-    # missing field json
-    #
-
-    if (
-        sentence_mode
-        and args.Sfj
-        and request_count == args.Sfj
-    ):
-
-        bad_json = {
-            "translation": "翻訳だけ",
-            "summary_ja": "要約だけ"
-        }
-
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content":
-                            json.dumps(bad_json)
-                    }
-                }
-            ]
-        }
-
-    #
     # normal sentence
     #
-
     if sentence_mode:
-        good_json = {
-            "translation": "翻訳だけ",
-            "summary_ja": "要約だけ",
-            "summary_en": "summary only",
-            "grammar_explanation": "grammar explanation only"
-        }
-
         ret = {
             "choices": [
                 {
                     "message": {
                         "role": "assistant",
-                        "content":
-                            json.dumps(good_json)
+                        "content": "普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、普通の返答、"
                     }
                 }
             ]

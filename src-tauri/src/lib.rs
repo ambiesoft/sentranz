@@ -9,7 +9,7 @@ use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
 use tauri::{Emitter, Manager, WindowEvent};
 
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -56,16 +56,18 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { .. } = event {
                 let app = window.app_handle();
-                // let state = app.state::<AppState>();
+                let state = app.state::<AppState>();
                 //
                 // main closed?
                 //
                 if window.label() == "main" {
-                    // close all windows
-                    // state.shutting_down.store(true, Ordering::SeqCst);
-                    // for (_, w) in app.webview_windows() {
-                    //     let _ = w.close();
-                    // }
+                    // hide all windows
+                    state.shutting_down.store(true, Ordering::SeqCst);
+                    for (_, w) in app.webview_windows() {
+                        let _ = w.hide();
+                    }
+                    let _ = window.hide();
+
                     let _ = app.emit("will_close", ());
                 } else {
                     // analysis window

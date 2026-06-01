@@ -1,10 +1,7 @@
 export type SentenceResult = {
   index: number;
   original: string;
-  translation: string;
-  summary_ja: string;
-  summary_en: string;
-  grammar_explanation: string;
+  answer: string;
   analysis_error: string;
 };
 export type State = {
@@ -13,6 +10,7 @@ export type State = {
   sentenceResult: SentenceResult | null;
   userQuestion: string;
   askAnswer: string;
+  scrollTop?: number;
 };
 
 export type AnalysisSession = {

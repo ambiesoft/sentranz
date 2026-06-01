@@ -29,9 +29,25 @@
             <button id="error-close-btn" class="error-close-btn">×</button>
           </div>
 
-          <div id="word-info" class="word-info"></div>
+          <!-- Analysis -->
+          <div id="analysis-panel" class="panel analysis-panel">
+            <div class="panel-header">
+              <button id="toggle-analysis">▼ Analysis</button>
+            </div>
 
-          <div id="ask-answer"></div>
+            <div id="word-info" class="panel-body"></div>
+          </div>
+
+          <!-- Ask -->
+          <div id="ask-panel" class="panel ask-panel">
+            <div class="panel-header">
+              <button id="toggle-ask">▶ Ask AI</button>
+            </div>
+
+            <div id="ask-answer" class="panel-body hidden"></div>
+          </div>
+
+          <!-- Ask Input -->
           <div class="ask-pane">
             <textarea id="ask-input" placeholder="Ask AI..."></textarea>
             <button id="ask-btn">Ask</button>
