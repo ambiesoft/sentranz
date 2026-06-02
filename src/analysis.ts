@@ -157,6 +157,7 @@ async function init() {
     sentenceSelect.appendChild(option);
   }
 
+  updatePanels();
   renderCurrentData(session.currentIndex);
 
   startAnalyze(0, -1, false);
@@ -427,6 +428,11 @@ async function registerWindowEvents() {
     const scale = await appWindow.scaleFactor();
     session.width = payload.width / scale;
     session.height = payload.height / scale;
+
+    await invoke('set_default_analysis_size', {
+      width: session.width,
+      height: session.height,
+    });
 
     clearTimeout(resizeTimer);
 

@@ -12,6 +12,8 @@ pub struct AppState {
     pub llm_ask_queue: Arc<Mutex<VecDeque<LlmJob>>>,
     pub ask_running: Arc<AtomicBool>,
     pub shutting_down: Arc<AtomicBool>,
+    pub default_analysis_width: Arc<Mutex<u32>>,
+    pub default_analysis_height: Arc<Mutex<u32>>,
 }
 
 #[derive(Clone)]

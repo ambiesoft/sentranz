@@ -430,3 +430,16 @@ pub fn is_shutting_down(state: State<AppState>) -> bool {
 pub fn exit_app(app: AppHandle) {
     app.exit(0);
 }
+
+#[tauri::command]
+pub fn get_default_analysis_size(state: State<AppState>) -> (u32, u32) {
+    let width = state.default_analysis_width.lock().unwrap();
+    let height = state.default_analysis_height.lock().unwrap();
+
+    (width.clone(), height.clone())
+}
+#[tauri::command]
+pub fn set_default_analysis_size(state: State<AppState>, width: u32, height: u32) {
+    *state.default_analysis_width.lock().unwrap() = width;
+    *state.default_analysis_height.lock().unwrap() = height;
+}

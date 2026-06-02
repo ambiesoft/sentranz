@@ -233,6 +233,11 @@ async function init() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
+    if (currentSentences.length === 0) {
+      alert('Please enter some sentences to analyze.');
+      return;
+    }
+
     const sessionId = 'analysis-' + crypto.randomUUID();
     const session = {
       id: sessionId,
@@ -250,10 +255,14 @@ async function init() {
 
     saveSession(session);
 
+    const [width, height] = await invoke<[number, number]>(
+      'get_default_analysis_size',
+    );
+    console.log('default analysis window size', width, height);
     await invoke('open_analysis_window', {
       sessionId,
-      width: 800,
-      height: 600,
+      width,
+      height,
     });
   });
 

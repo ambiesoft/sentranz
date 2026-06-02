@@ -2,12 +2,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-
   width: 100%;
   height: 100%;
-
   overflow: hidden;
-
   font-family: sans-serif;
 }
 
@@ -18,7 +15,6 @@ body {
 .layout {
   display: flex;
   flex-direction: column;
-
   width: 100%;
   height: 100vh;
 }
@@ -26,68 +22,51 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-
   gap: 8px;
-
   padding: 8px;
-
   border-bottom: 1px solid #ccc;
-
   flex-shrink: 0;
 }
 
 .toolbar-right {
   margin-left: auto;
-
   display: flex;
   gap: 8px;
 }
 
 .content {
   display: flex;
-
   flex: 1;
-
   min-height: 0;
 }
 
 .tree-pane {
   width: 10%;
-
   border-right: 1px solid #ccc;
-
   padding: 12px;
-
   overflow: auto;
 }
 
 .right-pane {
   display: flex;
   flex-direction: column;
-
   flex: 1;
   min-height: 0;
 }
 
 .sentence-pane {
   padding: 12px;
-
   border-bottom: 1px solid #ccc;
-
   max-height: 30%;
-
   overflow: auto;
-
   font-size: 20px;
   line-height: 1.6;
-
   flex-shrink: 0;
 }
 .analysis-panel,
 .ask-panel {
   display: flex;
   flex-direction: column;
-
   min-height: 0;
 }
 
@@ -115,10 +94,18 @@ body {
 
 #word-info {
   flex: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 12px;
+  padding-right: 12px;
   overflow: auto;
 }
 
 #ask-answer.panel-body {
+    padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 12px;
+  padding-right: 12px;
   white-space: pre-wrap;
 }
 
@@ -183,40 +170,22 @@ body {
 }
 
 .analysis-open .analysis-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: 1;
 }
 .analysis-open .ask-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: none;
 }
 
 .ask-open .analysis-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: none;
 }
 .ask-open .ask-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: 1;
 }
 
 .both-open .analysis-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: 1;
 }
 .both-open .ask-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   flex: 1;
 }
