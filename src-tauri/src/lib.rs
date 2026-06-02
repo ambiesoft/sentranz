@@ -9,7 +9,7 @@ use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
 use tauri::{Emitter, Manager, WindowEvent};
 
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -27,6 +27,8 @@ pub fn run() {
             llm_ask_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             ask_running: Arc::new(AtomicBool::new(false)),
             shutting_down: Arc::new(AtomicBool::new(false)),
+            default_analysis_width: Arc::new(Mutex::new(800)),
+            default_analysis_height: Arc::new(Mutex::new(600)),
         })
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -52,20 +54,24 @@ pub fn run() {
             commands::window_focused,
             commands::is_shutting_down,
             commands::exit_app,
+            commands::get_default_analysis_size,
+            commands::set_default_analysis_size,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { .. } = event {
                 let app = window.app_handle();
-                // let state = app.state::<AppState>();
+                let state = app.state::<AppState>();
                 //
                 // main closed?
                 //
                 if window.label() == "main" {
-                    // close all windows
-                    // state.shutting_down.store(true, Ordering::SeqCst);
-                    // for (_, w) in app.webview_windows() {
-                    //     let _ = w.close();
-                    // }
+                    // hide all windows
+                    state.shutting_down.store(true, Ordering::SeqCst);
+                    for (_, w) in app.webview_windows() {
+                        let _ = w.hide();
+                    }
+                    let _ = window.hide();
+
                     let _ = app.emit("will_close", ());
                 } else {
                     // analysis window

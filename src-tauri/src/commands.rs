@@ -1,8 +1,7 @@
 use crate::llm::openai::OpenAiProvider;
 use crate::llm::types::Message;
 use crate::models::{
-    AskAiResponse, JobError, JobProgress, LlmSentenceResponse, ModelInfo, QueueProgress,
-    SentenceResult,
+    AskAiResponse, JobError, JobProgress, ModelInfo, QueueProgress, SentenceResult,
 };
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::AppState;
@@ -12,12 +11,6 @@ use std::time::Duration;
 use tauri::State;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use uuid::Uuid;
-
-fn extract_json(s: &str) -> Option<String> {
-    let start = s.find('{')?;
-    let end = s.rfind('}')?;
-    Some(s[start..=end].to_string())
-}
 
 #[tauri::command]
 pub async fn get_available_models() -> Result<Vec<ModelInfo>, String> {
@@ -122,16 +115,7 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
 
                 let prompt = format!(
                     r#"
-Translate the sentence into Japanese, summarize briefly in Japanese, summarize briefly in English and explain it grammatically in Japanese.
-
-Return ONLY valid JSON.
-
-{{
-  "translation": "...",
-  "summary_ja": "...",
-  "summary_en": "...",
-  "grammar_explanation": "..."
-}}
+Please translate the following English sentence into Japanese and explain in Japanese any difficult vocabulary or helpful information for Japanese learners of English.
 
 Sentence:
 {}
@@ -174,47 +158,44 @@ Sentence:
                 #[cfg(debug_assertions)]
                 println!("RAW:\n{}", response);
 
-                let json_text = match extract_json(&response) {
-                    Some(x) => x,
+                // let json_text = match extract_json(&response) {
+                //     Some(x) => x,
 
-                    None => {
-                        let _ = window.emit_to(
-                            job.window_label.clone(),
-                            "analysis_error",
-                            JobError {
-                                index,
-                                message: format!("JSON parse error"),
-                                raw_response: Some(response),
-                            },
-                        );
-                        return;
-                    }
-                };
+                //     None => {
+                //         let _ = window.emit_to(
+                //             job.window_label.clone(),
+                //             "analysis_error",
+                //             JobError {
+                //                 index,
+                //                 message: format!("JSON parse error"),
+                //                 raw_response: Some(response),
+                //             },
+                //         );
+                //         return;
+                //     }
+                // };
 
-                let parsed: LlmSentenceResponse = match serde_json::from_str(&json_text) {
-                    Ok(x) => x,
+                // let parsed: LlmSentenceResponse = match serde_json::from_str(&json_text) {
+                //     Ok(x) => x,
 
-                    Err(e) => {
-                        let _ = window.emit_to(
-                            job.window_label.clone(),
-                            "analysis_error",
-                            JobError {
-                                index,
-                                message: format!("JSON format error: {}", e),
-                                raw_response: Some(response),
-                            },
-                        );
-                        return;
-                    }
-                };
+                //     Err(e) => {
+                //         let _ = window.emit_to(
+                //             job.window_label.clone(),
+                //             "analysis_error",
+                //             JobError {
+                //                 index,
+                //                 message: format!("JSON format error: {}", e),
+                //                 raw_response: Some(response),
+                //             },
+                //         );
+                //         return;
+                //     }
+                // };
 
                 let result = SentenceResult {
                     index,
                     original: sentence,
-                    translation: parsed.translation,
-                    summary_ja: parsed.summary_ja,
-                    summary_en: parsed.summary_en,
-                    grammar_explanation: parsed.grammar_explanation,
+                    answer: response,
                     analysis_error: "".into(),
                 };
 
@@ -448,4 +429,17 @@ pub fn is_shutting_down(state: State<AppState>) -> bool {
 #[tauri::command]
 pub fn exit_app(app: AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+pub fn get_default_analysis_size(state: State<AppState>) -> (u32, u32) {
+    let width = state.default_analysis_width.lock().unwrap();
+    let height = state.default_analysis_height.lock().unwrap();
+
+    (width.clone(), height.clone())
+}
+#[tauri::command]
+pub fn set_default_analysis_size(state: State<AppState>, width: u32, height: u32) {
+    *state.default_analysis_width.lock().unwrap() = width;
+    *state.default_analysis_height.lock().unwrap() = height;
 }

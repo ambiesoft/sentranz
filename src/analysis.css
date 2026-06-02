@@ -2,12 +2,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-
   width: 100%;
   height: 100%;
-
   overflow: hidden;
-
   font-family: sans-serif;
 }
 
@@ -18,7 +15,6 @@ body {
 .layout {
   display: flex;
   flex-direction: column;
-
   width: 100%;
   height: 100vh;
 }
@@ -31,36 +27,30 @@ body {
   border-bottom: 1px solid #ccc;
   flex-shrink: 0;
 }
+
 .toolbar-right {
   margin-left: auto;
   display: flex;
   gap: 8px;
 }
+
 .content {
   display: flex;
-
   flex: 1;
-
   min-height: 0;
 }
 
 .tree-pane {
   width: 10%;
-
   border-right: 1px solid #ccc;
-
   padding: 12px;
-
   overflow: auto;
 }
 
 .right-pane {
   display: flex;
   flex-direction: column;
-
   flex: 1;
-
-  min-width: 0;
   min-height: 0;
 }
 
@@ -71,76 +61,84 @@ body {
   overflow: auto;
   font-size: 20px;
   line-height: 1.6;
-
   flex-shrink: 0;
 }
-
-.word-info {
-  padding: 12px;
-  max-height: 30%;
-  overflow: auto;
-
-  border-bottom: 1px solid #ccc;
-
-  flex-shrink: 0;
-}
-
-#ask-answer {
-  flex: 1;
-
+.analysis-panel,
+.ask-panel {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+}
 
-  padding: 12px;
+.panel-header {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
+  text-align: left;
+}
 
+.panel-header:hover {
+  background: #ebebeb;
+}
+
+.panel-body {
+  flex: 1;
   overflow: auto;
+  min-height: 0;
+}
 
+#word-info {
+  flex: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  overflow: auto;
+}
+
+#ask-answer.panel-body {
+    padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 12px;
+  padding-right: 12px;
   white-space: pre-wrap;
 }
 
 .ask-pane {
   display: flex;
   gap: 8px;
-
   padding: 12px;
-
   border-top: 1px solid #ccc;
-
   flex-shrink: 0;
 }
 
 #ask-input {
   flex: 1;
-
   min-height: 72px;
-
   resize: vertical;
-
   font-size: 16px;
 }
 
 #ask-btn {
   width: 100px;
-
   flex-shrink: 0;
 }
 
 .error-banner {
   display: flex;
   align-items: center;
-
   gap: 8px;
-
+  margin: 8px;
   padding: 8px 12px;
-
   border: 1px solid #d33;
-
   border-radius: 4px;
-
   background: #ffeaea;
-
   color: #900;
-
-  margin-bottom: 8px;
 }
 
 .error-banner.hidden {
@@ -155,9 +153,39 @@ body {
 .error-close-btn {
   border: none;
   background: transparent;
-
   font-size: 18px;
   cursor: pointer;
-
   padding: 0 4px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.analysis-panel,
+.ask-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analysis-open .analysis-panel {
+  flex: 1;
+}
+.analysis-open .ask-panel {
+  flex: none;
+}
+
+.ask-open .analysis-panel {
+  flex: none;
+}
+.ask-open .ask-panel {
+  flex: 1;
+}
+
+.both-open .analysis-panel {
+  flex: 1;
+}
+.both-open .ask-panel {
+  flex: 1;
 }

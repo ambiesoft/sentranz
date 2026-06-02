@@ -4,6 +4,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SentenceResult, AnalysisSession } from './type';
 import { loadSession, saveSession } from './analysisStore';
+import { marked } from 'marked';
+import markedKatex from 'marked-katex-extension';
+import DOMPurify from 'dompurify';
+
+// marked.setOptions({
+//   breaks: true,
+// });
+marked.use(markedKatex());
 
 type AskAiResponse = {
   index: number;
@@ -42,6 +50,11 @@ const askInput = document.querySelector('#ask-input') as HTMLTextAreaElement;
 const askBtn = document.querySelector('#ask-btn') as HTMLButtonElement;
 const askAnswer = document.querySelector('#ask-answer') as HTMLDivElement;
 
+const toggleAnalysis = document.getElementById('toggle-analysis')!;
+const toggleAsk = document.getElementById('toggle-ask')!;
+let analysisExpanded = true;
+let askExpanded = false;
+
 const appWindow = getCurrentWindow();
 const label = appWindow.label;
 let saveTimer: number;
@@ -49,16 +62,33 @@ let resizeTimer: number | undefined;
 
 let session: AnalysisSession;
 
+function updatePanels() {
+  wordInfo.classList.toggle('hidden', !analysisExpanded);
+  askAnswer.classList.toggle('hidden', !askExpanded);
+
+  document.body.classList.remove('both-open', 'analysis-open', 'ask-open');
+
+  if (analysisExpanded && askExpanded) {
+    document.body.classList.add('both-open');
+  } else if (analysisExpanded) {
+    document.body.classList.add('analysis-open');
+  } else if (askExpanded) {
+    document.body.classList.add('ask-open');
+  }
+
+  toggleAnalysis.textContent = `${analysisExpanded ? '▼' : '▶'} Analysis`;
+
+  toggleAsk.textContent = `${askExpanded ? '▼' : '▶'} Ask AI`;
+}
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = window.setTimeout(async () => {
     await saveSession(session);
   }, 500);
 }
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function renderAnswer(text: string): string {
+  return DOMPurify.sanitize(marked.parse(text) as string);
 }
-
 function showError(message: string) {
   errorMessage.textContent = message;
   errorBanner.classList.remove('hidden');
@@ -81,45 +111,12 @@ function renderCurrentData(index: number) {
 
   const result = session.states[session.currentIndex].sentenceResult;
   if (result) {
-    wordInfo.innerHTML = `
-      <div>
-        <b>Translation</b>
-      </div>
+    const savedScrollTop = session.states[session.currentIndex].scrollTop ?? 0;
+    wordInfo.innerHTML = renderAnswer(result.answer);
+    requestAnimationFrame(() => {
+      wordInfo.scrollTop = savedScrollTop;
+    });
 
-      <div>
-        ${escapeHtml(result.translation)}
-      </div>
-
-      <br />
-
-      <div>
-        <b>Summary (Japanese)</b>
-      </div>
-
-      <div>
-        ${escapeHtml(result.summary_ja)}
-      </div>
-
-      <br />
-
-      <div>
-        <b>Summary (English)</b>
-      </div>
-
-      <div>
-        ${escapeHtml(result.summary_en)}
-      </div>
-
-      <br />
-      
-      <div>
-        <b>Grammar Explanation</b>
-      </div>
-
-      <div>
-        ${escapeHtml(result.grammar_explanation)}
-      </div> 
-    `;
     if (result.analysis_error) {
       showError(result.analysis_error);
     } else {
@@ -158,14 +155,9 @@ async function init() {
     option.value = String(i);
     option.textContent = `Sentence ${i + 1}`;
     sentenceSelect.appendChild(option);
-    // states.push({
-    //   sentence: session.states[i].sentence,
-    //   sentenceResult: null,
-    //   userQuestion: '',
-    //   askAnswer: '',
-    // });
   }
 
+  updatePanels();
   renderCurrentData(session.currentIndex);
 
   startAnalyze(0, -1, false);
@@ -219,10 +211,7 @@ async function registerListers() {
       session.states[error.index].sentenceResult = {
         index: error.index,
         original: session.states[error.index].sentence,
-        translation: '',
-        summary_ja: '',
-        summary_en: '',
-        grammar_explanation: '',
+        answer: '',
         analysis_error: `Error: ${error.message}\n\n${error.raw_response || ''}`,
       };
     }
@@ -237,6 +226,8 @@ async function registerListers() {
     renderCurrentData(index);
 
     askBtn.disabled = false;
+    askExpanded = true;
+    updatePanels();
     scheduleSave();
   });
 
@@ -333,6 +324,16 @@ function saveCurrentQA() {
 async function registerDOMEvents() {
   console.log('registerDOMEvents');
 
+  toggleAnalysis.addEventListener('click', () => {
+    analysisExpanded = !analysisExpanded;
+    updatePanels();
+  });
+
+  toggleAsk.addEventListener('click', () => {
+    askExpanded = !askExpanded;
+    updatePanels();
+  });
+
   askInput.addEventListener('change', scheduleSave);
   wordInfo.addEventListener('change', scheduleSave);
   askAnswer.addEventListener('change', scheduleSave);
@@ -406,7 +407,11 @@ async function registerDOMEvents() {
       }
     }
   }); // End of askBtn click handler;
-}
+
+  wordInfo.addEventListener('scroll', () => {
+    session.states[session.currentIndex].scrollTop = wordInfo.scrollTop;
+  });
+} // End of registerDOMEvents function
 
 async function registerWindowEvents() {
   console.log('registerWindowEvents');
@@ -419,23 +424,15 @@ async function registerWindowEvents() {
     }
   });
 
-  // let shutdownSaved = false;
-  // let count = 0;
-  // console.log('appWindow.onCloseRequested');
-  // await appWindow.onCloseRequested(async () => {
-  //   const shuttingDown = await invoke<boolean>('is_shutting_down');
-  //   session.isOpen = shuttingDown;
-  //   if (!shutdownSaved) {
-  //     shutdownSaved = true;
-  //     console.log('count:', ++count);
-  //     await saveSession(session);
-  //   }
-  // });
-
   await appWindow.onResized(async ({ payload }) => {
     const scale = await appWindow.scaleFactor();
     session.width = payload.width / scale;
     session.height = payload.height / scale;
+
+    await invoke('set_default_analysis_size', {
+      width: session.width,
+      height: session.height,
+    });
 
     clearTimeout(resizeTimer);
 

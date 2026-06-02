@@ -13,4 +13,7 @@ npm install
 set LIBCLANG_PATH=C:\local\llvm\bin
 npm install @tauri-apps/plugin-store
 npm install @tauri-apps/plugin-fs
+npm install marked dompurify
+npm install katex marked
+npm install marked-katex-extension
 ```

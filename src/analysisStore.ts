@@ -46,18 +46,10 @@ export async function loadSession(sessionId: string) {
 
 export async function saveSession(session: AnalysisSession) {
   await ensureDir();
-
   const path = `${DIR}/${session.id}.json`;
-
-  await writeTextFile(
-    path,
-
-    JSON.stringify(session, null, 2),
-
-    {
-      baseDir: BaseDirectory.AppData,
-    },
-  );
+  await writeTextFile(path, JSON.stringify(session, null, 2), {
+    baseDir: BaseDirectory.AppData,
+  });
 }
 
 export async function loadSessions() {

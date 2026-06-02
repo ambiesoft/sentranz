@@ -13,7 +13,10 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-store": "^2.4.3"
+    "@tauri-apps/plugin-store": "^2.4.3",
+    "dompurify": "^3.4.7",
+    "marked": "^18.0.4",
+    "marked-katex-extension": "^5.1.10"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

@@ -1,5 +1,4 @@
 import argparse
-import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
@@ -24,6 +23,42 @@ DEFAULT_JSON = '''
   ]
 }
 '''
+LONGMD='''
+## mdview
+MD(markdown)ファイルを表示するアプリケーションです。
+
+## 動作環境
+.NET 4.0
+
+## 取扱種別
+このソフトはフリーウェアです。LICENCEファイルを参照してください。
+
+## インストール
+ダウンロードしたファイルは7z形式の自己解凍ファイルです。実行して解凍するか7zなどの解凍ソフトウェアで解凍してください。
+インストーラーはありません。
+
+## アンインストール
+ファイルを削除してください。アンインストーラーはありません。
+
+## 使い方
+mdview.exeを起動しファイルを開くボタンから希望のmdを選択します。
+
+## ファイルの変更を監視
+*ファイルの監視* ボタンをクリックすることにより監視が有効になります。ファイルの変更がブラウザ上のページに反映されます。
+
+## ダウンロード
+バイナリーはここから入手できます。
+<https://github.com/ambiesoft/mdview/releases>
+
+## 寄付
+開発の寄付を募集しています。
+<https://ambiesoft.github.io/webjumper/?target=donate>
+
+## 作者への連絡先
+* 電子メール <ambiesoft.trueff@gmail.com>
+* 掲示板 <https://ambiesoft.github.io/webjumper/?target=bbs>
+* 開発 <https://github.com/ambiesoft/mdview>
+'''
 
 
 class Message(BaseModel):
@@ -37,17 +72,17 @@ class ChatRequest(BaseModel):
 
 
 def is_sentence_request(text: str) -> bool:
-    return "Translate the sentence" in text
+    return not is_ask_request(text)
 
 
 def is_ask_request(text: str) -> bool:
-    return "User question:" in text
+    return "You are an English reading tutor." in text
 
 
 @app.post("/v1/chat/completions")
 async def chat(req: ChatRequest):
-    time.sleep(10)
-	
+    time.sleep(1)
+
     global request_count
     request_count += 1
 
@@ -87,65 +122,15 @@ async def chat(req: ChatRequest):
         )
 
     #
-    # invalid json
-    #
-
-    if (
-        sentence_mode
-        and args.Snj
-        and request_count == args.Snj
-    ):
-
-        json_obj = json.loads(DEFAULT_JSON)
-        json_obj["choices"][0]["message"]["content"] = "DEBUG SEVER SEND THIS :THIS IS NOT JSON"
-
-        print(json.dumps(json_obj, indent=2))
-        return json_obj
-    #
-    # missing field json
-    #
-
-    if (
-        sentence_mode
-        and args.Sfj
-        and request_count == args.Sfj
-    ):
-
-        bad_json = {
-            "translation": "翻訳だけ",
-            "summary_ja": "要約だけ"
-        }
-
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content":
-                            json.dumps(bad_json)
-                    }
-                }
-            ]
-        }
-
-    #
     # normal sentence
     #
-
     if sentence_mode:
-        good_json = {
-            "translation": "翻訳だけ",
-            "summary_ja": "要約だけ",
-            "summary_en": "summary only",
-            "grammar_explanation": "grammar explanation only"
-        }
-
         ret = {
             "choices": [
                 {
                     "message": {
                         "role": "assistant",
-                        "content":
-                            json.dumps(good_json)
+                        "content": LONGMD,
                     }
                 }
             ]
