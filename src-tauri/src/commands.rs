@@ -357,7 +357,7 @@ pub async fn open_analysis_window(
     )
     .title(session_id.clone())
     .inner_size(width, height)
-    // .devtools(true)
+    .devtools(true)
     .build()
     .map_err(|e| e.to_string())?;
 
