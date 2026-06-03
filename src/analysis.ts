@@ -27,31 +27,32 @@ type JobError = {
   raw_response?: string;
 };
 
-const sentencePane = document.querySelector('#sentence-pane')!;
-const wordInfo = document.querySelector('#word-info')!;
-const prevBtn = document.querySelector('#prev-btn') as HTMLButtonElement;
-const nextBtn = document.querySelector('#next-btn') as HTMLButtonElement;
-const retryBtn = document.querySelector('#retry-btn') as HTMLButtonElement;
-const retryAllErrorsBtn = document.querySelector(
+const sentencePaneEl = document.querySelector('#sentence-pane')!;
+const wordInfoEl = document.querySelector('#word-info')!;
+const prevBtnEl = document.querySelector('#prev-btn') as HTMLButtonElement;
+const nextBtnEl = document.querySelector('#next-btn') as HTMLButtonElement;
+const retryBtnEl = document.querySelector('#retry-btn') as HTMLButtonElement;
+const retryAllErrorsBtnEl = document.querySelector(
   '#retry-all-error-btn',
 ) as HTMLButtonElement;
 
-const sentenceSelect = document.querySelector(
+const sentenceSelectEl = document.querySelector(
   '#sentence-select',
 ) as HTMLSelectElement;
-const errorBanner = document.getElementById('error-banner') as HTMLDivElement;
-const errorMessage = document.getElementById(
+const errorBannerEl = document.getElementById('error-banner') as HTMLDivElement;
+const errorMessageEl = document.getElementById(
   'error-message',
 ) as HTMLSpanElement;
-const errorCloseBtn = document.getElementById(
+const errorCloseBtnEl = document.getElementById(
   'error-close-btn',
 ) as HTMLButtonElement;
-const askInput = document.querySelector('#ask-input') as HTMLTextAreaElement;
-const askBtn = document.querySelector('#ask-btn') as HTMLButtonElement;
-const askAnswer = document.querySelector('#ask-answer') as HTMLDivElement;
+const askInputEl = document.querySelector('#ask-input') as HTMLTextAreaElement;
+const askBtnEl = document.querySelector('#ask-btn') as HTMLButtonElement;
+const askAnswerEl = document.querySelector('#ask-answer') as HTMLDivElement;
 
-const toggleAnalysis = document.getElementById('toggle-analysis')!;
-const toggleAsk = document.getElementById('toggle-ask')!;
+const toggleAnalysisEl = document.getElementById('toggle-analysis')!;
+const toggleAskEl = document.getElementById('toggle-ask')!;
+
 let analysisExpanded = true;
 let askExpanded = false;
 
@@ -63,8 +64,8 @@ let resizeTimer: number | undefined;
 let session: AnalysisSession;
 
 function updatePanels() {
-  wordInfo.classList.toggle('hidden', !analysisExpanded);
-  askAnswer.classList.toggle('hidden', !askExpanded);
+  wordInfoEl.classList.toggle('hidden', !analysisExpanded);
+  askAnswerEl.classList.toggle('hidden', !askExpanded);
 
   document.body.classList.remove('both-open', 'analysis-open', 'ask-open');
 
@@ -76,9 +77,9 @@ function updatePanels() {
     document.body.classList.add('ask-open');
   }
 
-  toggleAnalysis.textContent = `${analysisExpanded ? '▼' : '▶'} Analysis`;
+  toggleAnalysisEl.textContent = `${analysisExpanded ? '▼' : '▶'} Analysis`;
 
-  toggleAsk.textContent = `${askExpanded ? '▼' : '▶'} Ask AI`;
+  toggleAskEl.textContent = `${askExpanded ? '▼' : '▶'} Ask AI`;
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -90,11 +91,11 @@ function renderAnswer(text: string): string {
   return DOMPurify.sanitize(marked.parse(text) as string);
 }
 function showError(message: string) {
-  errorMessage.textContent = message;
-  errorBanner.classList.remove('hidden');
+  errorMessageEl.textContent = message;
+  errorBannerEl.classList.remove('hidden');
 }
 function hideError() {
-  errorBanner.classList.add('hidden');
+  errorBannerEl.classList.add('hidden');
 }
 
 function renderCurrentData(index: number) {
@@ -106,15 +107,16 @@ function renderCurrentData(index: number) {
     saveCurrentQA();
     return;
   }
-  sentenceSelect.value = String(session.currentIndex);
-  sentencePane.textContent = session.states[session.currentIndex].sentence;
+  sentenceSelectEl.value = String(session.currentIndex);
+  sentencePaneEl.textContent = session.states[session.currentIndex].sentence;
 
   const result = session.states[session.currentIndex].sentenceResult;
   if (result) {
-    const savedScrollTop = session.states[session.currentIndex].scrollTop ?? 0;
-    wordInfo.innerHTML = renderAnswer(result.answer);
+    const savedWordInfoScrollTop =
+      session.states[session.currentIndex].wordInfoScrollTop ?? 0;
+    wordInfoEl.innerHTML = renderAnswer(result.answer);
     requestAnimationFrame(() => {
-      wordInfo.scrollTop = savedScrollTop;
+      wordInfoEl.scrollTop = savedWordInfoScrollTop;
     });
 
     if (result.analysis_error) {
@@ -123,16 +125,23 @@ function renderCurrentData(index: number) {
       hideError();
     }
   } else if (session.states[session.currentIndex].progressMessage) {
-    wordInfo.innerHTML =
+    wordInfoEl.innerHTML =
       session.states[session.currentIndex].progressMessage || '';
   } else {
-    wordInfo.innerHTML = 'Waiting...';
+    wordInfoEl.innerHTML = 'Waiting...';
   }
 
-  askAnswer.textContent = session.states[session.currentIndex].askAnswer || '';
+  const savedAskAnswerScrollTop =
+    session.states[session.currentIndex].askAnswerScrollTop ?? 0;
+  askAnswerEl.innerHTML = renderAnswer(
+    session.states[session.currentIndex].askAnswer || '',
+  );
+  requestAnimationFrame(() => {
+    askAnswerEl.scrollTop = savedAskAnswerScrollTop;
+  });
 
   // Load user's question for this sentence, if any
-  askInput.value = session.states[session.currentIndex].userQuestion || '';
+  askInputEl.value = session.states[session.currentIndex].userQuestion || '';
 }
 
 async function init() {
@@ -154,7 +163,7 @@ async function init() {
     const option = document.createElement('option');
     option.value = String(i);
     option.textContent = `Sentence ${i + 1}`;
-    sentenceSelect.appendChild(option);
+    sentenceSelectEl.appendChild(option);
   }
 
   updatePanels();
@@ -223,9 +232,10 @@ async function registerListers() {
     const response = event.payload as AskAiResponse;
     const index = response.index;
     session.states[index].askAnswer = response.response;
+
     renderCurrentData(index);
 
-    askBtn.disabled = false;
+    askBtnEl.disabled = false;
     askExpanded = true;
     updatePanels();
     scheduleSave();
@@ -254,7 +264,7 @@ async function registerListers() {
     session.states[error.index].askAnswer =
       `Error: ${error.message}\n\n${error.raw_response || ''}`;
     renderCurrentData(error.index);
-    askBtn.disabled = false;
+    askBtnEl.disabled = false;
   });
 }
 
@@ -263,8 +273,8 @@ async function startAnalyze(
   count: number,
   isOnlyError: boolean,
 ) {
-  retryBtn.disabled = true;
-  retryAllErrorsBtn.disabled = true;
+  retryBtnEl.disabled = true;
+  retryAllErrorsBtnEl.disabled = true;
   count = count < 0 ? session.states.length : startIndex + count;
   try {
     let index = startIndex;
@@ -322,8 +332,8 @@ async function startAnalyze(
     console.error('Error invoking analyze_text:', e);
     alert('Analysis failed:\n\n' + String(e));
   } finally {
-    retryBtn.disabled = false;
-    retryAllErrorsBtn.disabled = false;
+    retryBtnEl.disabled = false;
+    retryAllErrorsBtnEl.disabled = false;
   }
 }
 
@@ -331,31 +341,31 @@ function saveCurrentQA() {
   if (session.states.length === 0) {
     return;
   }
-  const currentanswer = askAnswer.textContent?.trim() || '';
+  const currentanswer = askAnswerEl.innerHTML?.trim() || '';
   session.states[session.currentIndex].askAnswer = currentanswer;
 
-  const currentQuestion = askInput.value.trim();
+  const currentQuestion = askInputEl.value.trim();
   session.states[session.currentIndex].userQuestion = currentQuestion;
 }
 
 async function registerDOMEvents() {
   console.log('registerDOMEvents');
 
-  toggleAnalysis.addEventListener('click', () => {
+  toggleAnalysisEl.addEventListener('click', () => {
     analysisExpanded = !analysisExpanded;
     updatePanels();
   });
 
-  toggleAsk.addEventListener('click', () => {
+  toggleAskEl.addEventListener('click', () => {
     askExpanded = !askExpanded;
     updatePanels();
   });
 
-  askInput.addEventListener('change', scheduleSave);
-  wordInfo.addEventListener('change', scheduleSave);
-  askAnswer.addEventListener('change', scheduleSave);
+  askInputEl.addEventListener('change', scheduleSave);
+  wordInfoEl.addEventListener('change', scheduleSave);
+  askAnswerEl.addEventListener('change', scheduleSave);
 
-  prevBtn.addEventListener('click', () => {
+  prevBtnEl.addEventListener('click', () => {
     if (session.currentIndex > 0) {
       saveCurrentQA();
       session.currentIndex--;
@@ -365,7 +375,7 @@ async function registerDOMEvents() {
     }
   });
 
-  nextBtn.addEventListener('click', () => {
+  nextBtnEl.addEventListener('click', () => {
     if (session.currentIndex < session.states.length - 1) {
       saveCurrentQA();
 
@@ -375,37 +385,37 @@ async function registerDOMEvents() {
     }
   });
 
-  sentenceSelect.addEventListener('change', () => {
+  sentenceSelectEl.addEventListener('change', () => {
     saveCurrentQA();
-    session.currentIndex = Number(sentenceSelect.value);
+    session.currentIndex = Number(sentenceSelectEl.value);
     renderCurrentData(session.currentIndex);
   });
 
-  retryBtn.addEventListener('click', () => {
+  retryBtnEl.addEventListener('click', () => {
     session.states[session.currentIndex].progressMessage = '';
     session.states[session.currentIndex].sentenceResult = null;
     startAnalyze(session.currentIndex, 1, false);
   });
-  retryAllErrorsBtn.addEventListener('click', () => {
+  retryAllErrorsBtnEl.addEventListener('click', () => {
     startAnalyze(0, -1, true);
   });
 
-  errorCloseBtn.addEventListener('click', () => {
+  errorCloseBtnEl.addEventListener('click', () => {
     hideError();
   });
 
-  askBtn.addEventListener('click', async () => {
-    const question = askInput.value.trim();
+  askBtnEl.addEventListener('click', async () => {
+    const question = askInputEl.value.trim();
     if (!question) {
       return;
     }
 
     session.states[session.currentIndex].userQuestion = '';
-    askInput.value = '';
+    askInputEl.value = '';
 
     const sentence = session.states[session.currentIndex].sentence;
-    askAnswer.textContent = 'Waiting...';
-    askBtn.disabled = true;
+    askAnswerEl.textContent = 'Waiting...';
+    askBtnEl.disabled = true;
 
     const indexSave = session.currentIndex;
 
@@ -419,14 +429,19 @@ async function registerDOMEvents() {
     } catch (e) {
       alert('Failed to get answer:\n\n' + String(e));
       session.states[indexSave].userQuestion = question;
-      if (indexSave === session.currentIndex && !askInput.value) {
-        askInput.value = question;
+      if (indexSave === session.currentIndex && !askInputEl.value) {
+        askInputEl.value = question;
       }
     }
   }); // End of askBtn click handler;
 
-  wordInfo.addEventListener('scroll', () => {
-    session.states[session.currentIndex].scrollTop = wordInfo.scrollTop;
+  wordInfoEl.addEventListener('scroll', () => {
+    session.states[session.currentIndex].wordInfoScrollTop =
+      wordInfoEl.scrollTop;
+  });
+  askAnswerEl.addEventListener('scroll', () => {
+    session.states[session.currentIndex].askAnswerScrollTop =
+      askAnswerEl.scrollTop;
   });
 } // End of registerDOMEvents function
 

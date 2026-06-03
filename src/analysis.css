@@ -102,11 +102,10 @@ body {
 }
 
 #ask-answer.panel-body {
-    padding-top: 0;
+  padding-top: 0;
   padding-bottom: 0;
   padding-left: 12px;
   padding-right: 12px;
-  white-space: pre-wrap;
 }
 
 .ask-pane {

@@ -288,6 +288,9 @@ Explain clearly and briefly."#,
                     }
                 };
 
+                #[cfg(debug_assertions)]
+                println!("RAW:\n{}", response);
+
                 let payload = AskAiResponse { index, response };
                 let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
             } else {

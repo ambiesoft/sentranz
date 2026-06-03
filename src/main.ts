@@ -13,15 +13,16 @@ type ModelInfo = {
 };
 
 const inputEl = document.querySelector<HTMLTextAreaElement>('#input-text')!;
-const modelSelect = document.querySelector<HTMLSelectElement>('#model-select')!;
-const clearBtn = document.querySelector<HTMLButtonElement>('#clear-btn')!;
-const pasteHtmlBtn =
+const modelSelectEl =
+  document.querySelector<HTMLSelectElement>('#model-select')!;
+const clearBtnEl = document.querySelector<HTMLButtonElement>('#clear-btn')!;
+const pasteHtmlBtnEl =
   document.querySelector<HTMLButtonElement>('#paste-html-btn')!;
-const pasteTextBtn =
+const pasteTextBtnEl =
   document.querySelector<HTMLButtonElement>('#paste-text-btn')!;
-const splitBtn = document.querySelector<HTMLButtonElement>('#split-btn')!;
-const resplitBtn = document.querySelector<HTMLButtonElement>('#resplit-btn')!;
-const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
+const splitBtnEl = document.querySelector<HTMLButtonElement>('#split-btn')!;
+const resplitBtnEl = document.querySelector<HTMLButtonElement>('#resplit-btn')!;
+const analyzeBtnEl = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
 const sentenceListEl =
   document.querySelector<HTMLTextAreaElement>('#sentence-list')!;
 
@@ -62,14 +63,14 @@ async function init() {
     const option = document.createElement('option');
     option.value = String(i);
     option.textContent = models[i].display_name;
-    modelSelect.appendChild(option);
+    modelSelectEl.appendChild(option);
   }
   const savedModel = await storeSettings.get<string>('current_model');
   if (savedModel) {
     const idx = models.findIndex((x) => x.id === savedModel);
 
     if (idx >= 0) {
-      modelSelect.selectedIndex = idx;
+      modelSelectEl.selectedIndex = idx;
 
       await invoke('set_current_model', {
         modelId: savedModel,
@@ -93,8 +94,8 @@ async function init() {
     });
   }
 
-  modelSelect.addEventListener('change', async () => {
-    const selectedModel = models[modelSelect.selectedIndex];
+  modelSelectEl.addEventListener('change', async () => {
+    const selectedModel = models[modelSelectEl.selectedIndex];
     setCurrentModel(selectedModel.id);
     await storeSettings.set('current_model', selectedModel.id);
 
@@ -116,12 +117,12 @@ async function init() {
   inputEl.addEventListener('input', scheduleSave);
   sentenceListEl.addEventListener('input', scheduleSave);
 
-  clearBtn.addEventListener('click', () => {
+  clearBtnEl.addEventListener('click', () => {
     inputEl.value = '';
   });
 
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
-  pasteHtmlBtn.addEventListener(
+  pasteHtmlBtnEl.addEventListener(
     'click',
 
     async () => {
@@ -141,7 +142,7 @@ async function init() {
     },
   );
 
-  pasteTextBtn.addEventListener('click', async () => {
+  pasteTextBtnEl.addEventListener('click', async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (!text) {
@@ -155,7 +156,7 @@ async function init() {
   });
 
   // Split Handler: Sends the input text to the Rust backend for splitting and updates the sentence list textarea
-  splitBtn.addEventListener('click', async () => {
+  splitBtnEl.addEventListener('click', async () => {
     let text = inputEl.value.trim();
     if (!text) {
       alert('Please enter some text to split.');
@@ -224,7 +225,7 @@ async function init() {
     }
   });
 
-  resplitBtn.addEventListener('click', async () => {
+  resplitBtnEl.addEventListener('click', async () => {
     const text = sentenceListEl.value.trim();
     if (!text) {
       alert('Please enter some sentences to re-split.');
@@ -252,7 +253,7 @@ async function init() {
   });
 
   // Analyze Handler: Sends the sentences to the Rust backend for analysis
-  analyzeBtn.addEventListener('click', async () => {
+  analyzeBtnEl.addEventListener('click', async () => {
     const text = sentenceListEl.value;
     const sentences = text
       .split(/\n{2,}/)

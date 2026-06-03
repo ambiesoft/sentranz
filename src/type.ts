@@ -10,7 +10,8 @@ export type State = {
   sentenceResult: SentenceResult | null;
   userQuestion: string;
   askAnswer: string;
-  scrollTop?: number;
+  wordInfoScrollTop?: number;
+  askAnswerScrollTop?: number;
 };
 
 export type AnalysisSession = {

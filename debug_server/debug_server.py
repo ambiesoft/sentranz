@@ -148,8 +148,8 @@ async def chat(req: ChatRequest):
                 {
                     "message": {
                         "role": "assistant",
-                        "content":
-                            "これは Ask AI の返答です"
+                        "content":LONGMD,
+
                     }
                 }
             ]
