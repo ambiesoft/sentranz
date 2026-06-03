@@ -20,13 +20,12 @@ const pasteHtmlBtn =
 const pasteTextBtn =
   document.querySelector<HTMLButtonElement>('#paste-text-btn')!;
 const splitBtn = document.querySelector<HTMLButtonElement>('#split-btn')!;
+const resplitBtn = document.querySelector<HTMLButtonElement>('#resplit-btn')!;
 const analyzeBtn = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
 const sentenceListEl =
   document.querySelector<HTMLTextAreaElement>('#sentence-list')!;
 
 const appWindow = getCurrentWindow();
-
-let currentSentences: string[] = [];
 
 let storeMain: Store;
 let saveTimer: number;
@@ -84,9 +83,9 @@ async function init() {
   const sessions = await loadSessions();
   const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
-    let width = session.width ?? 1200.0;
-    let height = session.height ?? 800.0;
-    console.log('eee', width, height);
+    let width = session.width && session.width > 0.0 ? session.width : 1200.0;
+    let height =
+      session.height && session.height > 0.0 ? session.height : 800.0;
     await invoke('open_analysis_window', {
       sessionId: session.id,
       width,
@@ -225,15 +224,42 @@ async function init() {
     }
   });
 
+  resplitBtn.addEventListener('click', async () => {
+    const text = sentenceListEl.value.trim();
+    if (!text) {
+      alert('Please enter some sentences to re-split.');
+      return;
+    }
+    const resultSentences: string[] = [];
+    const sentences = text
+      .split(/\n{2,}/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    for (let sentence of sentences) {
+      if (!sentence) {
+        continue;
+      }
+      try {
+        let t = await invoke<string[]>('split_text', { text: sentence });
+        resultSentences.push(...t);
+      } catch (e) {
+        console.error('Error invoking split_text:', e);
+        alert('Failed to split text:\n\n' + String(e));
+        return;
+      }
+    }
+    sentenceListEl.value = resultSentences.join('\n\n');
+  });
+
   // Analyze Handler: Sends the sentences to the Rust backend for analysis
   analyzeBtn.addEventListener('click', async () => {
     const text = sentenceListEl.value;
-    currentSentences = text
+    const sentences = text
       .split(/\n{2,}/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    if (currentSentences.length === 0) {
+    if (sentences.length === 0) {
       alert('Please enter some sentences to analyze.');
       return;
     }
@@ -244,7 +270,7 @@ async function init() {
 
       currentIndex: 0,
 
-      states: currentSentences.map((s) => ({
+      states: sentences.map((s) => ({
         sentence: s,
         sentenceResult: null,
         userQuestion: '',
@@ -278,12 +304,14 @@ async function init() {
   });
 
   appWindow.listen('queue_progress', async (event) => {
-    const { total } = event.payload as {
+    const { running, total } = event.payload as {
+      running: number;
       total: number;
     };
-
-    const title =
-      total === 0 ? 'Sentranz' : `${total} jobs remaining | Sentranz`;
+    function formatTitle(running: number, total: number): string {
+      return `Active: ${running}, Remaining: ${total} | Sentranz`;
+    }
+    const title = formatTitle(running, total);
     await getCurrentWindow().setTitle(title);
   });
 

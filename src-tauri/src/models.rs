@@ -58,5 +58,6 @@ pub struct JobProgress {
 
 #[derive(Clone, Serialize)]
 pub struct QueueProgress {
+    pub running: usize,
     pub total: usize,
 }

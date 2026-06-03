@@ -9,7 +9,7 @@ use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
 use tauri::{Emitter, Manager, WindowEvent};
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -29,6 +29,7 @@ pub fn run() {
             shutting_down: Arc::new(AtomicBool::new(false)),
             default_analysis_width: Arc::new(Mutex::new(800)),
             default_analysis_height: Arc::new(Mutex::new(600)),
+            running_ai_jobs: Arc::new(AtomicUsize::new(0)),
         })
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -47,6 +48,7 @@ pub fn run() {
             commands::open_analysis_window,
             // commands::get_session_sentences,
             commands::analyze_text,
+            commands::set_document_title,
             commands::ask_ai,
             commands::split_text,
             commands::set_current_model,

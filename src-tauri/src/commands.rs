@@ -6,6 +6,7 @@ use crate::models::{
 use crate::models::{LlmJob, LlmJobKind};
 use crate::state::AppState;
 use crate::text::splitter::split_sentences;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::State;
@@ -63,7 +64,6 @@ pub async fn llm_analysis_loop(app: AppHandle, state: AppState) {
 
         match job {
             Some(job) => {
-                emit_remaining_task_count(&app, &state);
                 process_job(&app, &state, job).await;
             }
 
@@ -82,7 +82,6 @@ pub async fn llm_ask_loop(app: AppHandle, state: AppState) {
 
         match job {
             Some(job) => {
-                emit_remaining_task_count(&app, &state);
                 state.ask_running.store(true, Ordering::SeqCst);
                 process_job(&app, &state, job).await;
                 state.ask_running.store(false, Ordering::SeqCst);
@@ -96,6 +95,27 @@ pub async fn llm_ask_loop(app: AppHandle, state: AppState) {
 }
 
 async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
+    state.running_ai_jobs.fetch_add(1, Ordering::SeqCst);
+    emit_remaining_task_count(&app, &state);
+    struct RunningGuard<'a> {
+        counter: &'a AtomicUsize,
+        app: &'a AppHandle,
+        state: &'a AppState,
+    }
+
+    impl Drop for RunningGuard<'_> {
+        fn drop(&mut self) {
+            self.counter.fetch_sub(1, Ordering::SeqCst);
+            emit_remaining_task_count(self.app, self.state);
+        }
+    }
+
+    let _guard = RunningGuard {
+        counter: &state.running_ai_jobs,
+        app,
+        state,
+    };
+
     match job.kind {
         LlmJobKind::AnalyzeSentence { index, sentence } => {
             eprint!(
@@ -292,24 +312,43 @@ pub async fn analyze_text(
         _priority: 100,
         kind: LlmJobKind::AnalyzeSentence { index, sentence },
     };
-
-    let mut queue = state.llm_analysis_queue.lock().unwrap();
-    queue.push_back(job);
-
-    let remaining = { queue.len() };
-    let progress = QueueProgress { total: remaining };
-    let _ = app.emit("queue_progress", progress);
-
+    {
+        let mut queue = state.llm_analysis_queue.lock().unwrap();
+        queue.push_back(job);
+    }
+    emit_remaining_task_count(&app, &state);
     Ok(())
 }
 
+#[tauri::command]
+pub async fn set_document_title(
+    app: AppHandle,
+    label: String,
+    title: String,
+) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(&label) {
+        window.set_title(&title).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("window not found".into())
+    }
+}
+
 fn emit_remaining_task_count(app: &AppHandle, state: &AppState) {
-    let queue_analysis = state.llm_analysis_queue.lock().unwrap();
-    let queue_ask = state.llm_ask_queue.lock().unwrap();
+    let remaining: usize;
+    let running: usize;
+    {
+        let queue_analysis = state.llm_analysis_queue.lock().unwrap();
+        let queue_ask = state.llm_ask_queue.lock().unwrap();
 
-    let remaining = { queue_analysis.len() + queue_ask.len() };
+        remaining = queue_analysis.len() + queue_ask.len();
+        running = state.running_ai_jobs.load(Ordering::SeqCst);
+    }
 
-    let progress = QueueProgress { total: remaining };
+    let progress = QueueProgress {
+        running,
+        total: remaining,
+    };
     let _ = app.emit("queue_progress", progress);
 }
 #[tauri::command]
@@ -332,13 +371,11 @@ pub async fn ask_ai(
         },
     };
 
-    let mut queue = state.llm_ask_queue.lock().unwrap();
-    queue.push_front(job);
-
-    let remaining = { queue.len() };
-
-    let progress = QueueProgress { total: remaining };
-    let _ = app.emit("queue_progress", progress);
+    {
+        let mut queue = state.llm_ask_queue.lock().unwrap();
+        queue.push_front(job);
+    }
+    emit_remaining_task_count(&app, &state);
     Ok(())
 }
 
@@ -355,7 +392,7 @@ pub async fn open_analysis_window(
         session_id.clone(),
         WebviewUrl::App("analysis.html".into()),
     )
-    .title(session_id.clone())
+    .title("Analysis")
     .inner_size(width, height)
     .devtools(true)
     .build()

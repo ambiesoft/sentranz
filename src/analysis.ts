@@ -284,6 +284,23 @@ async function startAnalyze(
         }
       }
 
+      if (index === 0) {
+        // Set title
+        function truncate(str: string, maxLength: number): string {
+          if (str.length <= maxLength) {
+            return str;
+          }
+          return str.slice(0, maxLength) + '...';
+        }
+        console.log(
+          'Setting document title to:',
+          session.states[index].sentence,
+        );
+        await invoke('set_document_title', {
+          label,
+          title: `${truncate(session.states[index].sentence, 100)} | Analysis`,
+        });
+      }
       // clear current
       session.states[index].sentenceResult = null;
       session.states[index].progressMessage = '';
