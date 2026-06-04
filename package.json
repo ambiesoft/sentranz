@@ -15,11 +15,13 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-store": "^2.4.3",
     "dompurify": "^3.4.7",
+    "mark.js": "^8.11.1",
     "marked": "^18.0.4",
     "marked-katex-extension": "^5.1.10"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/mark.js": "^8.11.12",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   }

@@ -16,4 +16,5 @@ npm install @tauri-apps/plugin-fs
 npm install marked dompurify
 npm install katex marked
 npm install marked-katex-extension
+npm install mark.js
 ```

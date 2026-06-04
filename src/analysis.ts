@@ -7,6 +7,7 @@ import { loadSession, saveSession } from './analysisStore';
 import { marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import DOMPurify from 'dompurify';
+import Mark from 'mark.js';
 
 // marked.setOptions({
 //   breaks: true,
@@ -27,8 +28,10 @@ type JobError = {
   raw_response?: string;
 };
 
-const sentencePaneEl = document.querySelector('#sentence-pane')!;
-const wordInfoEl = document.querySelector('#word-info')!;
+const sentencePaneEl = document.querySelector(
+  '#sentence-pane',
+) as HTMLDivElement;
+const wordInfoEl = document.querySelector('#word-info') as HTMLDivElement;
 const prevBtnEl = document.querySelector('#prev-btn') as HTMLButtonElement;
 const nextBtnEl = document.querySelector('#next-btn') as HTMLButtonElement;
 const retryBtnEl = document.querySelector('#retry-btn') as HTMLButtonElement;
@@ -62,6 +65,20 @@ let saveTimer: number;
 let resizeTimer: number | undefined;
 
 let session: AnalysisSession;
+
+let selectedWord = '';
+const markInstanceSentence = new Mark(sentencePaneEl);
+markInstanceSentence.unmark({
+  done: () => {
+    markInstanceSentence.mark(selectedWord);
+  },
+});
+// const markInstanceWordInfo = new Mark(wordInfoEl);
+// markInstanceWordInfo.unmark({
+//   done: () => {
+//     markInstanceWordInfo.mark(selectedWord);
+//   },
+// });
 
 function updatePanels() {
   wordInfoEl.classList.toggle('hidden', !analysisExpanded);
@@ -442,6 +459,25 @@ async function registerDOMEvents() {
   askAnswerEl.addEventListener('scroll', () => {
     session.states[session.currentIndex].askAnswerScrollTop =
       askAnswerEl.scrollTop;
+  });
+
+  document.addEventListener('mouseup', () => {
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed) {
+      markInstanceSentence.unmark();
+      // markInstanceWordInfo.unmark();
+      return;
+    }
+
+    selectedWord = selection.toString().trim();
+
+    if (!selectedWord) {
+      return;
+    }
+
+    markInstanceSentence.mark(selectedWord);
+    // markInstanceWordInfo.mark(selectedWord);
   });
 } // End of registerDOMEvents function
 
