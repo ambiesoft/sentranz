@@ -34,7 +34,9 @@ pub struct LlmJob {
 pub enum LlmJobKind {
     AnalyzeSentence {
         index: usize,
+        prev_sentences: Vec<String>,
         sentence: String,
+        after_sentences: Vec<String>,
     },
     AskAi {
         index: usize,

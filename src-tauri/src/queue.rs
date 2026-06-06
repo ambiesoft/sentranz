@@ -77,7 +77,7 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
     };
 
     match job.kind {
-        LlmJobKind::AnalyzeSentence { index, sentence } => {
+        LlmJobKind::AnalyzeSentence { index,  prev_sentences,sentence, after_sentences } => {
             eprint!(
                 "Analyzing sentence with label {}: {}\n",
                 job.window_label, sentence
@@ -94,15 +94,35 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
                 };
 
                 let prompt = format!(
-                    r#"
-Please translate the following English sentence into Japanese and explain in Japanese any difficult vocabulary or helpful information for Japanese learners of English.
+r#"
+Context:
 
-Sentence:
 {}
-"#,
-                    sentence
-                );
 
+=== TARGET SENTENCE ===
+{}
+=== END TARGET SENTENCE ===
+
+{}
+
+Translate and explain the TARGET SENTENCE.
+
+Use the surrounding context when needed to resolve:
+- pronouns (he, she, it, they)
+- omitted information
+- references to previous events
+- ambiguous words
+
+Answer in Japanese.
+"#,
+    prev_sentences.join("\n"),
+    sentence,
+    after_sentences.join("\n")
+);
+
+                #[cfg(debug_assertions)]
+                println!("Prompt:\n{}\n", prompt);
+                
                 let messages = vec![Message {
                     role: "user".into(),
                     content: prompt,

@@ -91,6 +91,7 @@ async function init() {
       sessionId: session.id,
       width,
       height,
+      startAnalysis: false,
     });
   }
 
@@ -278,7 +279,6 @@ async function init() {
         askAnswer: '',
       })),
       isOpen: true,
-      startOpen: true,
     };
 
     saveSession(session);
@@ -291,6 +291,7 @@ async function init() {
       sessionId,
       width,
       height,
+      startAnalysis: true,
     });
   });
 

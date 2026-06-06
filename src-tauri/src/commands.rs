@@ -15,13 +15,20 @@ pub async fn analyze_text(
     state: State<'_, AppState>,
     label: String,
     index: usize,
+    prev_sentences: Vec<String>,
     sentence: String,
+    after_sentences: Vec<String>,
 ) -> Result<(), String> {
     let job = LlmJob {
         _id: Uuid::new_v4(),
         window_label: label.clone(),
         _priority: 100,
-        kind: LlmJobKind::AnalyzeSentence { index, sentence },
+        kind: LlmJobKind::AnalyzeSentence {
+            index,
+            prev_sentences,
+            sentence,
+            after_sentences,
+        },
     };
     {
         let mut queue = state.llm_analysis_queue.lock().unwrap();
@@ -97,11 +104,12 @@ pub async fn open_analysis_window(
     session_id: String,
     width: f64,
     height: f64,
+    start_analysis: bool,
 ) -> Result<(), String> {
     let window = WebviewWindowBuilder::new(
         &app,
         session_id.clone(),
-        WebviewUrl::App("analysis.html".into()),
+        WebviewUrl::App(format!("analysis.html?start_analysis={}", start_analysis).into()),
     )
     .title("Analysis")
     .inner_size(width, height)
@@ -112,14 +120,19 @@ pub async fn open_analysis_window(
     let state = app.state::<AppState>().inner().clone();
 
     // Clean up session and pending jobs when window is closed
+    // clone session_id for the closure so we don't move the original
+    let session_for_cleanup = session_id.clone();
     window.on_window_event(move |event| {
         if let tauri::WindowEvent::Destroyed = event {
-            let mut queue_analysis = state.llm_analysis_queue.lock().unwrap();
-            queue_analysis.retain(|job| job.window_label != session_id.clone());
+            {
+                let mut queue_analysis = state.llm_analysis_queue.lock().unwrap();
+                queue_analysis.retain(|job| job.window_label != session_for_cleanup.clone());
 
-            let mut queue_ask = state.llm_ask_queue.lock().unwrap();
-            queue_ask.retain(|job| job.window_label != session_id.clone());
-            println!("cleaned queue for {}", session_id);
+                let mut queue_ask = state.llm_ask_queue.lock().unwrap();
+                queue_ask.retain(|job| job.window_label != session_for_cleanup.clone());
+                println!("cleaned queue for {}", session_for_cleanup.clone());
+            }
+            emit_remaining_task_count(&app, &state);
         }
     });
 

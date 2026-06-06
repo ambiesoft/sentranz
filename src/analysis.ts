@@ -64,7 +64,6 @@ let askExpanded = false;
 const appWindow = getCurrentWindow();
 const label = appWindow.label;
 let saveTimer: number;
-let resizeTimer: number | undefined;
 
 let session: AnalysisSession;
 
@@ -121,6 +120,11 @@ function showError(message: string) {
 }
 function hideError() {
   errorBannerEl.classList.add('hidden');
+}
+
+function getStartAnalysisParam(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('start_analysis') === 'true';
 }
 
 function renderCurrentData(index: number) {
@@ -194,8 +198,10 @@ async function init() {
   updatePanels();
   renderCurrentData(session.currentIndex);
 
-  if (session.startOpen) {
-    startAnalyze(0, -1);
+  const startAnalysis = getStartAnalysisParam();
+  console.log('start_analysis', startAnalysis, 'from', window.location.href);
+  if (startAnalysis) {
+    startAnalyze(session.currentIndex, -1);
   }
 } // End of init function
 
@@ -345,16 +351,46 @@ async function startAnalyze(startIndex: number, count: number) {
       session.states[index].progressMessage = '';
       renderCurrentData(index);
 
+      function getPreviousSentences(index: number, count: number): string[] {
+        const sentences: string[] = [];
+        for (let i = index - count; i < index; i++) {
+          if (i >= 0) {
+            sentences.push(session.states[i].sentence);
+          } else {
+            return sentences;
+          }
+        }
+        return sentences;
+      }
+      function getAfterSentences(index: number, count: number): string[] {
+        const sentences: string[] = [];
+        for (let i = index + 1; i <= index + count; i++) {
+          if (i < session.states.length) {
+            sentences.push(session.states[i].sentence);
+          } else {
+            return sentences;
+          }
+        }        
+        return sentences;
+      }
+      const contextPreviousSentenceCount = 10;
+      const contextAfterSentenceCount = 5;
       console.log(
         'Invoking analyze_text with label:',
         label,
+        'prevSentences:',
+        getPreviousSentences(index, contextPreviousSentenceCount),
         'sentence:',
         session.states[index].sentence,
+        'afterSentences:',
+        getAfterSentences(index, contextAfterSentenceCount),
       );
       await invoke('analyze_text', {
         label,
         index,
+        prevSentences: getPreviousSentences(index, contextPreviousSentenceCount),
         sentence: session.states[index].sentence,
+        afterSentences: getAfterSentences(index, contextAfterSentenceCount),
       });
     }
   } catch (e) {
@@ -527,11 +563,7 @@ async function registerWindowEvents() {
       height: session.height,
     });
 
-    clearTimeout(resizeTimer);
-
-    resizeTimer = window.setTimeout(() => {
-      saveSession(session);
-    }, 500);
+    scheduleSave();
   });
 } // registerWindowEvents
 init();

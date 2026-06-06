@@ -21,6 +21,5 @@ export type AnalysisSession = {
   isOpen: boolean;
   width?: number;
   height?: number;
-  startOpen?: boolean;
   title?: string;
 };
