@@ -187,6 +187,8 @@ async function init() {
   session = loadedSession;
   console.log('session loaded:', session);
 
+  session.states.forEach((s)=>s.progressMessage='');
+
   // create option combobox
   for (let i = 0; i < session.states.length; i++) {
     const option = document.createElement('option');

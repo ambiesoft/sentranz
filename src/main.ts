@@ -87,6 +87,7 @@ async function init() {
     let width = session.width && session.width > 0.0 ? session.width : 1200.0;
     let height =
       session.height && session.height > 0.0 ? session.height : 800.0;
+    session.states.forEach((s)=>s.progressMessage='');
     await invoke('open_analysis_window', {
       sessionId: session.id,
       width,
