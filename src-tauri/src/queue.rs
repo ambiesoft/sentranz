@@ -1,0 +1,228 @@
+use crate::commands::emit_remaining_task_count;
+use crate::llm::openai::OpenAiProvider;
+use crate::llm::types::Message;
+use crate::models::{AskAiResponse, JobError, JobProgress, SentenceResult};
+use crate::models::{LlmJob, LlmJobKind};
+use crate::state::AppState;
+
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+
+use tauri::{AppHandle, Emitter, Manager};
+
+pub async fn llm_analysis_loop(app: AppHandle, state: AppState) {
+    loop {
+        if state.ask_running.load(Ordering::SeqCst) {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            continue;
+        }
+        let job = {
+            let mut queue = state.llm_analysis_queue.lock().unwrap();
+            queue.pop_front()
+        };
+
+        match job {
+            Some(job) => {
+                process_job(&app, &state, job).await;
+            }
+
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    }
+}
+pub async fn llm_ask_loop(app: AppHandle, state: AppState) {
+    loop {
+        let job = {
+            let mut queue = state.llm_ask_queue.lock().unwrap();
+            queue.pop_front()
+        };
+
+        match job {
+            Some(job) => {
+                state.ask_running.store(true, Ordering::SeqCst);
+                process_job(&app, &state, job).await;
+                state.ask_running.store(false, Ordering::SeqCst);
+            }
+
+            None => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+    }
+}
+
+async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
+    state.running_ai_jobs.fetch_add(1, Ordering::SeqCst);
+    emit_remaining_task_count(&app, &state);
+    struct RunningGuard<'a> {
+        counter: &'a AtomicUsize,
+        app: &'a AppHandle,
+        state: &'a AppState,
+    }
+
+    impl Drop for RunningGuard<'_> {
+        fn drop(&mut self) {
+            self.counter.fetch_sub(1, Ordering::SeqCst);
+            emit_remaining_task_count(self.app, self.state);
+        }
+    }
+
+    let _guard = RunningGuard {
+        counter: &state.running_ai_jobs,
+        app,
+        state,
+    };
+
+    match job.kind {
+        LlmJobKind::AnalyzeSentence { index, sentence } => {
+            eprint!(
+                "Analyzing sentence with label {}: {}\n",
+                job.window_label, sentence
+            );
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                // window found, continue processing
+
+                let config = { state.current_model.lock().unwrap().clone() };
+
+                let provider = OpenAiProvider {
+                    endpoint: "http://localhost:1234/v1/chat/completions".into(),
+                    model: config.id,
+                    api_key: None,
+                };
+
+                let prompt = format!(
+                    r#"
+Please translate the following English sentence into Japanese and explain in Japanese any difficult vocabulary or helpful information for Japanese learners of English.
+
+Sentence:
+{}
+"#,
+                    sentence
+                );
+
+                let messages = vec![Message {
+                    role: "user".into(),
+                    content: prompt,
+                }];
+
+                let _ = window.emit_to(
+                    job.window_label.clone(),
+                    "analysis_progress",
+                    JobProgress {
+                        index,
+                        message: "Thinking...".into(),
+                    },
+                );
+
+                let response = match provider.chat(messages).await {
+                    Ok(x) => x,
+
+                    Err(e) => {
+                        eprintln!("CHAT ERROR: {:?}", e);
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
+                            "analysis_error",
+                            JobError {
+                                index,
+                                message: format!("LLM request error: {}", e),
+                                raw_response: None,
+                            },
+                        );
+                        return;
+                    }
+                };
+
+                #[cfg(debug_assertions)]
+                println!("RAW:\n{}", response);
+
+                let result = SentenceResult {
+                    index,
+                    original: sentence,
+                    answer: response,
+                    analysis_error: "".into(),
+                };
+
+                let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);
+            } else {
+                eprintln!("window not found: {}", job.window_label);
+                return;
+            }
+        }
+
+        LlmJobKind::AskAi {
+            index,
+            sentence,
+            question,
+        } => {
+            eprint!(
+                "Asking AI question with label {}: {}\n",
+                job.window_label, sentence
+            );
+            if let Some(window) = app.get_webview_window(&job.window_label) {
+                let config = { state.current_model.lock().unwrap().clone() };
+
+                let provider = OpenAiProvider {
+                    endpoint: config.endpoint,
+                    model: config.id,
+                    api_key: config.api_key,
+                };
+
+                let prompt = format!(
+                    r#"You are an English reading tutor.
+
+Sentence:
+{}
+
+User question:
+{}
+
+Answer in Japanese.
+Explain clearly and briefly."#,
+                    sentence, question
+                );
+
+                let messages = vec![Message {
+                    role: "user".into(),
+                    content: prompt,
+                }];
+
+                let _ = window.emit_to(
+                    job.window_label.clone(),
+                    "ask_ai_progress",
+                    JobProgress {
+                        index,
+                        message: "Thinking...".into(),
+                    },
+                );
+
+                let response = match provider.chat(messages).await {
+                    Ok(x) => x,
+                    Err(e) => {
+                        let _ = window.emit_to(
+                            job.window_label.clone(),
+                            "ask_ai_error",
+                            JobError {
+                                index,
+                                message: format!("LLM request error: {}", e),
+                                raw_response: None,
+                            },
+                        );
+                        return;
+                    }
+                };
+
+                #[cfg(debug_assertions)]
+                println!("RAW:\n{}", response);
+
+                let payload = AskAiResponse { index, response };
+                let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
+            } else {
+                eprintln!("window not found: {}", job.window_label);
+                return;
+            }
+        }
+    }
+}

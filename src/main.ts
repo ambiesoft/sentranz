@@ -278,6 +278,7 @@ async function init() {
         askAnswer: '',
       })),
       isOpen: true,
+      startOpen: true,
     };
 
     saveSession(session);

@@ -2,7 +2,7 @@ console.log('analysis.ts loaded');
 import './analysis.css';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { SentenceResult, AnalysisSession } from './type';
+import { SentenceResult, AnalysisSession, State } from './type';
 import { loadSession, saveSession } from './analysisStore';
 import { marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
@@ -34,9 +34,11 @@ const sentencePaneEl = document.querySelector(
 const wordInfoEl = document.querySelector('#word-info') as HTMLDivElement;
 const prevBtnEl = document.querySelector('#prev-btn') as HTMLButtonElement;
 const nextBtnEl = document.querySelector('#next-btn') as HTMLButtonElement;
-const retryBtnEl = document.querySelector('#retry-btn') as HTMLButtonElement;
-const retryAllErrorsBtnEl = document.querySelector(
-  '#retry-all-error-btn',
+const retryThisBtnEl = document.querySelector(
+  '#retry-this-btn',
+) as HTMLButtonElement;
+const retryFromHereBtnEl = document.querySelector(
+  '#retry-from-here-btn',
 ) as HTMLButtonElement;
 
 const sentenceSelectEl = document.querySelector(
@@ -73,12 +75,18 @@ markInstanceSentence.unmark({
     markInstanceSentence.mark(selectedWord);
   },
 });
-// const markInstanceWordInfo = new Mark(wordInfoEl);
-// markInstanceWordInfo.unmark({
-//   done: () => {
-//     markInstanceWordInfo.mark(selectedWord);
-//   },
-// });
+const markInstanceWordInfo = new Mark(wordInfoEl);
+markInstanceWordInfo.unmark({
+  done: () => {
+    markInstanceWordInfo.mark(selectedWord);
+  },
+});
+const markInstanceAskAnswer = new Mark(askAnswerEl);
+markInstanceAskAnswer.unmark({
+  done: () => {
+    markInstanceAskAnswer.mark(selectedWord);
+  },
+});
 
 function updatePanels() {
   wordInfoEl.classList.toggle('hidden', !analysisExpanded);
@@ -186,7 +194,9 @@ async function init() {
   updatePanels();
   renderCurrentData(session.currentIndex);
 
-  startAnalyze(0, -1, false);
+  if (session.startOpen) {
+    startAnalyze(0, -1);
+  }
 } // End of init function
 
 async function registerListers() {
@@ -285,30 +295,31 @@ async function registerListers() {
   });
 }
 
-async function startAnalyze(
-  startIndex: number,
-  count: number,
-  isOnlyError: boolean,
-) {
-  retryBtnEl.disabled = true;
-  retryAllErrorsBtnEl.disabled = true;
-  count = count < 0 ? session.states.length : startIndex + count;
+async function startAnalyze(startIndex: number, count: number) {
+  retryThisBtnEl.disabled = true;
+  retryFromHereBtnEl.disabled = true;
   try {
     let index = startIndex;
-    for (index = 0; index < count; ++index) {
-      if (!isOnlyError) {
-        if (session.states[index].sentenceResult) {
-          continue;
-        }
-      } else {
-        // isOnlyError
-        if (!session.states[index].sentenceResult) {
-          continue;
-        } else {
-          if (!session.states[index].sentenceResult?.analysis_error) {
-            continue;
-          }
-        }
+    count = count < 0 ? session.states.length : startIndex + count;
+
+    function shouldAnalyze(state: State): boolean {
+      if (!state.sentenceResult) {
+        return true;
+      }
+      // SentenceResult exists
+      if (state.sentenceResult.analysis_error) {
+        return true; // Re-analyze if there was an error
+      }
+      // SentenceResult exists and no error
+      if (!state.sentenceResult.answer) {
+        return true; // Re-analyze if answer is empty
+      }
+      return false; // No need to re-analyze
+    }
+
+    for (; index < count; ++index) {
+      if (!shouldAnalyze(session.states[index])) {
+        continue;
       }
 
       if (index === 0) {
@@ -323,9 +334,10 @@ async function startAnalyze(
           'Setting document title to:',
           session.states[index].sentence,
         );
+        session.title = `${truncate(session.states[index].sentence, 100)} | Analysis`;
         await invoke('set_document_title', {
           label,
-          title: `${truncate(session.states[index].sentence, 100)} | Analysis`,
+          title: session.title,
         });
       }
       // clear current
@@ -349,8 +361,8 @@ async function startAnalyze(
     console.error('Error invoking analyze_text:', e);
     alert('Analysis failed:\n\n' + String(e));
   } finally {
-    retryBtnEl.disabled = false;
-    retryAllErrorsBtnEl.disabled = false;
+    retryThisBtnEl.disabled = false;
+    retryFromHereBtnEl.disabled = false;
   }
 }
 
@@ -408,13 +420,13 @@ async function registerDOMEvents() {
     renderCurrentData(session.currentIndex);
   });
 
-  retryBtnEl.addEventListener('click', () => {
+  retryThisBtnEl.addEventListener('click', () => {
     session.states[session.currentIndex].progressMessage = '';
     session.states[session.currentIndex].sentenceResult = null;
-    startAnalyze(session.currentIndex, 1, false);
+    startAnalyze(session.currentIndex, 1);
   });
-  retryAllErrorsBtnEl.addEventListener('click', () => {
-    startAnalyze(0, -1, true);
+  retryFromHereBtnEl.addEventListener('click', () => {
+    startAnalyze(session.currentIndex, -1);
   });
 
   errorCloseBtnEl.addEventListener('click', () => {
@@ -466,7 +478,7 @@ async function registerDOMEvents() {
 
     if (!selection || selection.isCollapsed) {
       markInstanceSentence.unmark();
-      // markInstanceWordInfo.unmark();
+      markInstanceWordInfo.unmark();
       return;
     }
 
@@ -475,9 +487,22 @@ async function registerDOMEvents() {
     if (!selectedWord) {
       return;
     }
-
-    markInstanceSentence.mark(selectedWord);
-    // markInstanceWordInfo.mark(selectedWord);
+    const selectedContainer = selection?.anchorNode?.parentElement?.closest(
+      '#sentence-pane, #word-info, #ask-answer',
+    );
+    if (!selectedContainer) {
+      return;
+    }
+    if (selectedContainer.id === 'sentence-pane') {
+      markInstanceWordInfo.mark(selectedWord);
+      markInstanceAskAnswer.mark(selectedWord);
+    } else if (selectedContainer.id === 'word-info') {
+      markInstanceSentence.mark(selectedWord);
+      markInstanceAskAnswer.mark(selectedWord);
+    } else if (selectedContainer.id === 'ask-answer') {
+      markInstanceSentence.mark(selectedWord);
+      markInstanceWordInfo.mark(selectedWord);
+    }
   });
 } // End of registerDOMEvents function
 

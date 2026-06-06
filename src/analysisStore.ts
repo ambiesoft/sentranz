@@ -11,6 +11,7 @@ import {
 import { AnalysisSession } from './type';
 
 const DIR = 'analyses';
+const EXTENSION = '.json';
 
 async function ensureDir() {
   const ok = await exists(DIR, {
@@ -27,7 +28,7 @@ async function ensureDir() {
 export async function loadSession(sessionId: string) {
   await ensureDir();
 
-  const path = `${DIR}/${sessionId}.json`;
+  const path = `${DIR}/${sessionId}${EXTENSION}`;
 
   const ok = await exists(path, {
     baseDir: BaseDirectory.AppData,
@@ -41,12 +42,18 @@ export async function loadSession(sessionId: string) {
     baseDir: BaseDirectory.AppData,
   });
 
-  return JSON.parse(text) as AnalysisSession;
+  let session = JSON.parse(text) as AnalysisSession;
+  for (const state of session.states) {
+    if (state.sentenceResult) {
+      state.progressMessage = 'Loaded from previous session';
+    }
+  }
+  return session;
 }
 
 export async function saveSession(session: AnalysisSession) {
   await ensureDir();
-  const path = `${DIR}/${session.id}.json`;
+  const path = `${DIR}/${session.id}${EXTENSION}`;
   await writeTextFile(path, JSON.stringify(session, null, 2), {
     baseDir: BaseDirectory.AppData,
   });
@@ -62,22 +69,22 @@ export async function loadSessions() {
   const sessions: AnalysisSession[] = [];
 
   for (const entry of entries) {
-    if (!entry.name?.endsWith('.json')) {
+    if (!entry.name?.endsWith(EXTENSION)) {
       continue;
     }
 
-    const text = await readTextFile(`${DIR}/${entry.name}`, {
-      baseDir: BaseDirectory.AppData,
-    });
+    const session = await loadSession(entry.name.slice(0, -EXTENSION.length));
 
-    sessions.push(JSON.parse(text));
+    if (session) {
+      sessions.push(session);
+    }
   }
 
   return sessions;
 }
 
 export async function deleteSession(id: string) {
-  const path = `${DIR}/${id}.json`;
+  const path = `${DIR}/${id}${EXTENSION}`;
 
   const ok = await exists(path, {
     baseDir: BaseDirectory.AppData,

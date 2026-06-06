@@ -1,11 +1,12 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod aimodels;
 mod commands;
 mod llm;
 mod models;
+mod queue;
 mod state;
 mod text;
 
-use crate::commands::{llm_analysis_loop, llm_ask_loop};
 use state::AppState;
 use tauri::{Emitter, Manager, WindowEvent};
 
@@ -37,22 +38,21 @@ pub fn run() {
             let app_handle2 = app_handle.clone();
             let state2 = state.clone();
             tauri::async_runtime::spawn(async move {
-                llm_analysis_loop(app_handle, state).await;
+                queue::llm_analysis_loop(app_handle, state).await;
             });
             tauri::async_runtime::spawn(async move {
-                llm_ask_loop(app_handle2, state2).await;
+                queue::llm_ask_loop(app_handle2, state2).await;
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_analysis_window,
-            // commands::get_session_sentences,
             commands::analyze_text,
             commands::set_document_title,
             commands::ask_ai,
             commands::split_text,
-            commands::set_current_model,
-            commands::get_available_models,
+            aimodels::set_current_model,
+            aimodels::get_available_models,
             commands::window_focused,
             commands::is_shutting_down,
             commands::exit_app,
