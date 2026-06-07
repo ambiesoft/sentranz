@@ -84,10 +84,9 @@ async function init() {
   const sessions = await loadSessions();
   const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
-    let width = session.width && session.width > 0.0 ? session.width : 1200.0;
-    let height =
-      session.height && session.height > 0.0 ? session.height : 800.0;
-    session.states.forEach((s)=>s.progressMessage='');
+    let width = session.width && (session.width > 0.0 ? session.width : 1200.0);
+    let height = session.height && session.height > 0.0 ? session.height : 800.0;
+
     await invoke('open_analysis_window', {
       sessionId: session.id,
       width,

@@ -1,13 +1,13 @@
-console.log('analysis.ts loaded');
-import './analysis.css';
-import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { SentenceResult, AnalysisSession, State } from './type';
-import { loadSession, saveSession } from './analysisStore';
-import { marked } from 'marked';
-import markedKatex from 'marked-katex-extension';
-import DOMPurify from 'dompurify';
-import Mark from 'mark.js';
+console.log("analysis.ts loaded");
+import "./analysis.css";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { SentenceResult, AnalysisSession, State } from "./type";
+import { loadSession, saveSession } from "./analysisStore";
+import { marked } from "marked";
+import markedKatex from "marked-katex-extension";
+import DOMPurify from "dompurify";
+import Mark from "mark.js";
 
 // marked.setOptions({
 //   breaks: true,
@@ -29,34 +29,34 @@ type JobError = {
 };
 
 const sentencePaneEl = document.querySelector(
-  '#sentence-pane',
+  "#sentence-pane",
 ) as HTMLDivElement;
-const wordInfoEl = document.querySelector('#word-info') as HTMLDivElement;
-const prevBtnEl = document.querySelector('#prev-btn') as HTMLButtonElement;
-const nextBtnEl = document.querySelector('#next-btn') as HTMLButtonElement;
+const wordInfoEl = document.querySelector("#word-info") as HTMLDivElement;
+const prevBtnEl = document.querySelector("#prev-btn") as HTMLButtonElement;
+const nextBtnEl = document.querySelector("#next-btn") as HTMLButtonElement;
 const retryThisBtnEl = document.querySelector(
-  '#retry-this-btn',
+  "#retry-this-btn",
 ) as HTMLButtonElement;
 const retryFromHereBtnEl = document.querySelector(
-  '#retry-from-here-btn',
+  "#retry-from-here-btn",
 ) as HTMLButtonElement;
 
 const sentenceSelectEl = document.querySelector(
-  '#sentence-select',
+  "#sentence-select",
 ) as HTMLSelectElement;
-const errorBannerEl = document.getElementById('error-banner') as HTMLDivElement;
+const errorBannerEl = document.getElementById("error-banner") as HTMLDivElement;
 const errorMessageEl = document.getElementById(
-  'error-message',
+  "error-message",
 ) as HTMLSpanElement;
 const errorCloseBtnEl = document.getElementById(
-  'error-close-btn',
+  "error-close-btn",
 ) as HTMLButtonElement;
-const askInputEl = document.querySelector('#ask-input') as HTMLTextAreaElement;
-const askBtnEl = document.querySelector('#ask-btn') as HTMLButtonElement;
-const askAnswerEl = document.querySelector('#ask-answer') as HTMLDivElement;
+const askInputEl = document.querySelector("#ask-input") as HTMLTextAreaElement;
+const askBtnEl = document.querySelector("#ask-btn") as HTMLButtonElement;
+const askAnswerEl = document.querySelector("#ask-answer") as HTMLDivElement;
 
-const toggleAnalysisEl = document.getElementById('toggle-analysis')!;
-const toggleAskEl = document.getElementById('toggle-ask')!;
+const toggleAnalysisEl = document.getElementById("toggle-analysis")!;
+const toggleAskEl = document.getElementById("toggle-ask")!;
 
 let analysisExpanded = true;
 let askExpanded = false;
@@ -67,7 +67,7 @@ let saveTimer: number;
 
 let session: AnalysisSession;
 
-let selectedWord = '';
+let selectedWord = "";
 const markInstanceSentence = new Mark(sentencePaneEl);
 markInstanceSentence.unmark({
   done: () => {
@@ -88,22 +88,22 @@ markInstanceAskAnswer.unmark({
 });
 
 function updatePanels() {
-  wordInfoEl.classList.toggle('hidden', !analysisExpanded);
-  askAnswerEl.classList.toggle('hidden', !askExpanded);
+  wordInfoEl.classList.toggle("hidden", !analysisExpanded);
+  askAnswerEl.classList.toggle("hidden", !askExpanded);
 
-  document.body.classList.remove('both-open', 'analysis-open', 'ask-open');
+  document.body.classList.remove("both-open", "analysis-open", "ask-open");
 
   if (analysisExpanded && askExpanded) {
-    document.body.classList.add('both-open');
+    document.body.classList.add("both-open");
   } else if (analysisExpanded) {
-    document.body.classList.add('analysis-open');
+    document.body.classList.add("analysis-open");
   } else if (askExpanded) {
-    document.body.classList.add('ask-open');
+    document.body.classList.add("ask-open");
   }
 
-  toggleAnalysisEl.textContent = `${analysisExpanded ? '▼' : '▶'} Analysis`;
+  toggleAnalysisEl.textContent = `${analysisExpanded ? "▼" : "▶"} Analysis`;
 
-  toggleAskEl.textContent = `${askExpanded ? '▼' : '▶'} Ask AI`;
+  toggleAskEl.textContent = `${askExpanded ? "▼" : "▶"} Ask AI`;
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -116,15 +116,15 @@ function renderAnswer(text: string): string {
 }
 function showError(message: string) {
   errorMessageEl.textContent = message;
-  errorBannerEl.classList.remove('hidden');
+  errorBannerEl.classList.remove("hidden");
 }
 function hideError() {
-  errorBannerEl.classList.add('hidden');
+  errorBannerEl.classList.add("hidden");
 }
 
 function getStartAnalysisParam(): boolean {
   const params = new URLSearchParams(window.location.search);
-  return params.get('start_analysis') === 'true';
+  return params.get("start_analysis") === "true";
 }
 
 function renderCurrentData(index: number) {
@@ -155,26 +155,26 @@ function renderCurrentData(index: number) {
     }
   } else if (session.states[session.currentIndex].progressMessage) {
     wordInfoEl.innerHTML =
-      session.states[session.currentIndex].progressMessage || '';
+      session.states[session.currentIndex].progressMessage || "";
   } else {
-    wordInfoEl.innerHTML = 'Waiting...';
+    wordInfoEl.innerHTML = "Waiting...";
   }
 
   const savedAskAnswerScrollTop =
     session.states[session.currentIndex].askAnswerScrollTop ?? 0;
   askAnswerEl.innerHTML = renderAnswer(
-    session.states[session.currentIndex].askAnswer || '',
+    session.states[session.currentIndex].askAnswer || "",
   );
   requestAnimationFrame(() => {
     askAnswerEl.scrollTop = savedAskAnswerScrollTop;
   });
 
   // Load user's question for this sentence, if any
-  askInputEl.value = session.states[session.currentIndex].userQuestion || '';
+  askInputEl.value = session.states[session.currentIndex].userQuestion || "";
 }
 
 async function init() {
-  console.log('init() starts, Analysis init with label:', label);
+  console.log("init() starts, Analysis init with label:", label);
 
   await registerDOMEvents();
   await registerWindowEvents();
@@ -182,16 +182,16 @@ async function init() {
 
   const loadedSession = await loadSession(label);
   if (!loadedSession) {
-    throw new Error('Failed to load analysis session');
+    throw new Error("Failed to load analysis session");
   }
   session = loadedSession;
-  console.log('session loaded:', session);
+  console.log("session loaded:", session);
 
-  session.states.forEach((s)=>s.progressMessage='');
+  session.states.forEach((s) => (s.progressMessage = ""));
 
   // create option combobox
   for (let i = 0; i < session.states.length; i++) {
-    const option = document.createElement('option');
+    const option = document.createElement("option");
     option.value = String(i);
     option.textContent = `Sentence ${i + 1}`;
     sentenceSelectEl.appendChild(option);
@@ -201,17 +201,23 @@ async function init() {
   renderCurrentData(session.currentIndex);
 
   const startAnalysis = getStartAnalysisParam();
-  console.log('start_analysis', startAnalysis, 'from', window.location.href);
+  console.log("start_analysis", startAnalysis, "from", window.location.href);
   if (startAnalysis) {
     startAnalyze(session.currentIndex, -1);
   }
+
+  // set window title
+  await invoke("set_document_title", {
+    label,
+    title: session.title,
+  });
 } // End of init function
 
 async function registerListers() {
-  console.log('registerListers');
+  console.log("registerListers");
 
-  await appWindow.listen('sentence_ready', (event) => {
-    console.log('Received sentence_ready event with payload:', event.payload);
+  await appWindow.listen("sentence_ready", (event) => {
+    console.log("Received sentence_ready event with payload:", event.payload);
     const result = event.payload as SentenceResult;
     const index = result.index;
 
@@ -222,9 +228,9 @@ async function registerListers() {
     scheduleSave();
   });
 
-  await appWindow.listen('analysis_progress', (event) => {
+  await appWindow.listen("analysis_progress", (event) => {
     console.log(
-      'Received analysis_progress event with payload:',
+      "Received analysis_progress event with payload:",
       event.payload,
     );
     const progress = event.payload as JobProgress;
@@ -233,37 +239,37 @@ async function registerListers() {
     renderCurrentData(progress.index);
   });
 
-  await appWindow.listen('analysis_error', (event) => {
-    console.log('Received analysis_error event with payload:', event.payload);
+  await appWindow.listen("analysis_error", (event) => {
+    console.log("Received analysis_error event with payload:", event.payload);
     const error = event.payload as JobError;
     console.log(
-      'Received analysis_error event with payload:',
+      "Received analysis_error event with payload:",
       event.payload,
-      'currentIndex:',
+      "currentIndex:",
       session.currentIndex,
-      'error.index:',
+      "error.index:",
       error.index,
     );
     if (error.raw_response) {
-      console.error('Raw response from backend:', error.raw_response);
+      console.error("Raw response from backend:", error.raw_response);
     }
     const sentenceResult = session.states[error.index].sentenceResult;
     if (sentenceResult) {
       sentenceResult.index = error.index;
-      sentenceResult.analysis_error = `Error: ${error.message}\n\n${error.raw_response || ''}`;
+      sentenceResult.analysis_error = `Error: ${error.message}\n\n${error.raw_response || ""}`;
     } else {
       session.states[error.index].sentenceResult = {
         index: error.index,
         original: session.states[error.index].sentence,
-        answer: '',
-        analysis_error: `Error: ${error.message}\n\n${error.raw_response || ''}`,
+        answer: "",
+        analysis_error: `Error: ${error.message}\n\n${error.raw_response || ""}`,
       };
     }
     renderCurrentData(error.index);
   });
 
-  await appWindow.listen('ask_ai_response', (event) => {
-    console.log('Received ask_ai_response event with payload:', event.payload);
+  await appWindow.listen("ask_ai_response", (event) => {
+    console.log("Received ask_ai_response event with payload:", event.payload);
     const response = event.payload as AskAiResponse;
     const index = response.index;
     session.states[index].askAnswer = response.response;
@@ -276,28 +282,28 @@ async function registerListers() {
     scheduleSave();
   });
 
-  await appWindow.listen('ask_ai_progress', (event) => {
-    console.log('Received ask_ai_progress event with payload:', event.payload);
+  await appWindow.listen("ask_ai_progress", (event) => {
+    console.log("Received ask_ai_progress event with payload:", event.payload);
     const progress = event.payload as JobProgress;
     session.states[progress.index].askAnswer = progress.message;
     renderCurrentData(progress.index);
   });
 
-  await appWindow.listen('ask_ai_error', (event) => {
+  await appWindow.listen("ask_ai_error", (event) => {
     const error = event.payload as JobError;
     if (error.raw_response) {
-      console.error('Raw response from backend:', error.raw_response);
+      console.error("Raw response from backend:", error.raw_response);
     }
     console.log(
-      'Received ask_ai_error event with payload:',
+      "Received ask_ai_error event with payload:",
       event.payload,
-      'currentIndex:',
+      "currentIndex:",
       session.currentIndex,
-      'error.index:',
+      "error.index:",
       error.index,
     );
     session.states[error.index].askAnswer =
-      `Error: ${error.message}\n\n${error.raw_response || ''}`;
+      `Error: ${error.message}\n\n${error.raw_response || ""}`;
     renderCurrentData(error.index);
     askBtnEl.disabled = false;
   });
@@ -336,21 +342,21 @@ async function startAnalyze(startIndex: number, count: number) {
           if (str.length <= maxLength) {
             return str;
           }
-          return str.slice(0, maxLength) + '...';
+          return str.slice(0, maxLength) + "...";
         }
         console.log(
-          'Setting document title to:',
+          "Setting document title to:",
           session.states[index].sentence,
         );
         session.title = `${truncate(session.states[index].sentence, 100)} | Analysis`;
-        await invoke('set_document_title', {
+        await invoke("set_document_title", {
           label,
           title: session.title,
         });
       }
       // clear current
       session.states[index].sentenceResult = null;
-      session.states[index].progressMessage = '';
+      session.states[index].progressMessage = "";
       renderCurrentData(index);
 
       function getPreviousSentences(index: number, count: number): string[] {
@@ -372,32 +378,35 @@ async function startAnalyze(startIndex: number, count: number) {
           } else {
             return sentences;
           }
-        }        
+        }
         return sentences;
       }
       const contextPreviousSentenceCount = 10;
       const contextAfterSentenceCount = 5;
       console.log(
-        'Invoking analyze_text with label:',
+        "Invoking analyze_text with label:",
         label,
-        'prevSentences:',
+        "prevSentences:",
         getPreviousSentences(index, contextPreviousSentenceCount),
-        'sentence:',
+        "sentence:",
         session.states[index].sentence,
-        'afterSentences:',
+        "afterSentences:",
         getAfterSentences(index, contextAfterSentenceCount),
       );
-      await invoke('analyze_text', {
+      await invoke("analyze_text", {
         label,
         index,
-        prevSentences: getPreviousSentences(index, contextPreviousSentenceCount),
+        prevSentences: getPreviousSentences(
+          index,
+          contextPreviousSentenceCount,
+        ),
         sentence: session.states[index].sentence,
         afterSentences: getAfterSentences(index, contextAfterSentenceCount),
       });
     }
   } catch (e) {
-    console.error('Error invoking analyze_text:', e);
-    alert('Analysis failed:\n\n' + String(e));
+    console.error("Error invoking analyze_text:", e);
+    alert("Analysis failed:\n\n" + String(e));
   } finally {
     retryThisBtnEl.disabled = false;
     retryFromHereBtnEl.disabled = false;
@@ -408,7 +417,7 @@ function saveCurrentQA() {
   if (session.states.length === 0) {
     return;
   }
-  const currentanswer = askAnswerEl.innerHTML?.trim() || '';
+  const currentanswer = askAnswerEl.innerHTML?.trim() || "";
   session.states[session.currentIndex].askAnswer = currentanswer;
 
   const currentQuestion = askInputEl.value.trim();
@@ -416,23 +425,23 @@ function saveCurrentQA() {
 }
 
 async function registerDOMEvents() {
-  console.log('registerDOMEvents');
+  console.log("registerDOMEvents");
 
-  toggleAnalysisEl.addEventListener('click', () => {
+  toggleAnalysisEl.addEventListener("click", () => {
     analysisExpanded = !analysisExpanded;
     updatePanels();
   });
 
-  toggleAskEl.addEventListener('click', () => {
+  toggleAskEl.addEventListener("click", () => {
     askExpanded = !askExpanded;
     updatePanels();
   });
 
-  askInputEl.addEventListener('change', scheduleSave);
-  wordInfoEl.addEventListener('change', scheduleSave);
-  askAnswerEl.addEventListener('change', scheduleSave);
+  askInputEl.addEventListener("change", scheduleSave);
+  wordInfoEl.addEventListener("change", scheduleSave);
+  askAnswerEl.addEventListener("change", scheduleSave);
 
-  prevBtnEl.addEventListener('click', () => {
+  prevBtnEl.addEventListener("click", () => {
     if (session.currentIndex > 0) {
       saveCurrentQA();
       session.currentIndex--;
@@ -442,7 +451,7 @@ async function registerDOMEvents() {
     }
   });
 
-  nextBtnEl.addEventListener('click', () => {
+  nextBtnEl.addEventListener("click", () => {
     if (session.currentIndex < session.states.length - 1) {
       saveCurrentQA();
 
@@ -452,49 +461,49 @@ async function registerDOMEvents() {
     }
   });
 
-  sentenceSelectEl.addEventListener('change', () => {
+  sentenceSelectEl.addEventListener("change", () => {
     saveCurrentQA();
     session.currentIndex = Number(sentenceSelectEl.value);
     renderCurrentData(session.currentIndex);
   });
 
-  retryThisBtnEl.addEventListener('click', () => {
-    session.states[session.currentIndex].progressMessage = '';
+  retryThisBtnEl.addEventListener("click", () => {
+    session.states[session.currentIndex].progressMessage = "";
     session.states[session.currentIndex].sentenceResult = null;
     startAnalyze(session.currentIndex, 1);
   });
-  retryFromHereBtnEl.addEventListener('click', () => {
+  retryFromHereBtnEl.addEventListener("click", () => {
     startAnalyze(session.currentIndex, -1);
   });
 
-  errorCloseBtnEl.addEventListener('click', () => {
+  errorCloseBtnEl.addEventListener("click", () => {
     hideError();
   });
 
-  askBtnEl.addEventListener('click', async () => {
+  askBtnEl.addEventListener("click", async () => {
     const question = askInputEl.value.trim();
     if (!question) {
       return;
     }
 
-    session.states[session.currentIndex].userQuestion = '';
-    askInputEl.value = '';
+    session.states[session.currentIndex].userQuestion = "";
+    askInputEl.value = "";
 
     const sentence = session.states[session.currentIndex].sentence;
-    askAnswerEl.textContent = 'Waiting...';
+    askAnswerEl.textContent = "Waiting...";
     askBtnEl.disabled = true;
 
     const indexSave = session.currentIndex;
 
     try {
-      await invoke<AskAiResponse>('ask_ai', {
+      await invoke<AskAiResponse>("ask_ai", {
         label,
         index: session.currentIndex,
         sentence,
         question,
       });
     } catch (e) {
-      alert('Failed to get answer:\n\n' + String(e));
+      alert("Failed to get answer:\n\n" + String(e));
       session.states[indexSave].userQuestion = question;
       if (indexSave === session.currentIndex && !askInputEl.value) {
         askInputEl.value = question;
@@ -502,16 +511,16 @@ async function registerDOMEvents() {
     }
   }); // End of askBtn click handler;
 
-  wordInfoEl.addEventListener('scroll', () => {
+  wordInfoEl.addEventListener("scroll", () => {
     session.states[session.currentIndex].wordInfoScrollTop =
       wordInfoEl.scrollTop;
   });
-  askAnswerEl.addEventListener('scroll', () => {
+  askAnswerEl.addEventListener("scroll", () => {
     session.states[session.currentIndex].askAnswerScrollTop =
       askAnswerEl.scrollTop;
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener("mouseup", () => {
     const selection = window.getSelection();
 
     if (!selection || selection.isCollapsed) {
@@ -526,18 +535,18 @@ async function registerDOMEvents() {
       return;
     }
     const selectedContainer = selection?.anchorNode?.parentElement?.closest(
-      '#sentence-pane, #word-info, #ask-answer',
+      "#sentence-pane, #word-info, #ask-answer",
     );
     if (!selectedContainer) {
       return;
     }
-    if (selectedContainer.id === 'sentence-pane') {
+    if (selectedContainer.id === "sentence-pane") {
       markInstanceWordInfo.mark(selectedWord);
       markInstanceAskAnswer.mark(selectedWord);
-    } else if (selectedContainer.id === 'word-info') {
+    } else if (selectedContainer.id === "word-info") {
       markInstanceSentence.mark(selectedWord);
       markInstanceAskAnswer.mark(selectedWord);
-    } else if (selectedContainer.id === 'ask-answer') {
+    } else if (selectedContainer.id === "ask-answer") {
       markInstanceSentence.mark(selectedWord);
       markInstanceWordInfo.mark(selectedWord);
     }
@@ -545,11 +554,11 @@ async function registerDOMEvents() {
 } // End of registerDOMEvents function
 
 async function registerWindowEvents() {
-  console.log('registerWindowEvents');
+  console.log("registerWindowEvents");
 
   await appWindow.onFocusChanged(async ({ payload }) => {
     if (payload) {
-      await invoke('window_focused', {
+      await invoke("window_focused", {
         label: appWindow.label,
       });
     }
@@ -557,15 +566,17 @@ async function registerWindowEvents() {
 
   await appWindow.onResized(async ({ payload }) => {
     const scale = await appWindow.scaleFactor();
-    session.width = payload.width / scale;
-    session.height = payload.height / scale;
+    if (payload.width > 0 && payload.height > 0) {
+      session.width = payload.width / scale;
+      session.height = payload.height / scale;
 
-    await invoke('set_default_analysis_size', {
-      width: session.width,
-      height: session.height,
-    });
+      await invoke("set_default_analysis_size", {
+        width: session.width,
+        height: session.height,
+      });
 
-    scheduleSave();
+      scheduleSave();
+    }
   });
 } // registerWindowEvents
 init();
