@@ -105,7 +105,8 @@ Context:
 
 {}
 
-Translate and explain the TARGET SENTENCE.
+Translate and explain the TARGET SENTENCE. Also provide information that would be useful for Japanese learners of English.
+
 
 Use the surrounding context when needed to resolve:
 - pronouns (he, she, it, they)

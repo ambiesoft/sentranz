@@ -1,10 +1,10 @@
-console.log('main.ts loaded');
+console.log("main.ts loaded");
 
-import './styles.css';
-import { invoke } from '@tauri-apps/api/core';
-import { Store } from '@tauri-apps/plugin-store';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { loadSession, loadSessions, saveSession } from './analysisStore';
+import "./styles.css";
+import { invoke } from "@tauri-apps/api/core";
+import { Store } from "@tauri-apps/plugin-store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { loadSession, loadSessions, saveSession } from "./analysisStore";
 
 type ModelInfo = {
   id: string;
@@ -12,19 +12,19 @@ type ModelInfo = {
   provider: string;
 };
 
-const inputEl = document.querySelector<HTMLTextAreaElement>('#input-text')!;
+const inputEl = document.querySelector<HTMLTextAreaElement>("#input-text")!;
 const modelSelectEl =
-  document.querySelector<HTMLSelectElement>('#model-select')!;
-const clearBtnEl = document.querySelector<HTMLButtonElement>('#clear-btn')!;
+  document.querySelector<HTMLSelectElement>("#model-select")!;
+const clearBtnEl = document.querySelector<HTMLButtonElement>("#clear-btn")!;
 const pasteHtmlBtnEl =
-  document.querySelector<HTMLButtonElement>('#paste-html-btn')!;
+  document.querySelector<HTMLButtonElement>("#paste-html-btn")!;
 const pasteTextBtnEl =
-  document.querySelector<HTMLButtonElement>('#paste-text-btn')!;
-const splitBtnEl = document.querySelector<HTMLButtonElement>('#split-btn')!;
-const resplitBtnEl = document.querySelector<HTMLButtonElement>('#resplit-btn')!;
-const analyzeBtnEl = document.querySelector<HTMLButtonElement>('#analyze-btn')!;
+  document.querySelector<HTMLButtonElement>("#paste-text-btn")!;
+const splitBtnEl = document.querySelector<HTMLButtonElement>("#split-btn")!;
+const resplitBtnEl = document.querySelector<HTMLButtonElement>("#resplit-btn")!;
+const analyzeBtnEl = document.querySelector<HTMLButtonElement>("#analyze-btn")!;
 const sentenceListEl =
-  document.querySelector<HTMLTextAreaElement>('#sentence-list')!;
+  document.querySelector<HTMLTextAreaElement>("#sentence-list")!;
 
 const appWindow = getCurrentWindow();
 
@@ -32,8 +32,8 @@ let storeMain: Store;
 let saveTimer: number;
 
 async function saveState() {
-  await storeMain.set('inputText', inputEl.value);
-  await storeMain.set('sentenceList', sentenceListEl.value);
+  await storeMain.set("inputText", inputEl.value);
+  await storeMain.set("sentenceList", sentenceListEl.value);
 
   await storeMain.save();
 }
@@ -44,35 +44,35 @@ function scheduleSave() {
 
 async function setCurrentModel(modelId: string) {
   try {
-    await invoke('set_current_model', { modelId });
-    console.log('Model set successfully:', modelId);
+    await invoke("set_current_model", { modelId });
+    console.log("Model set successfully:", modelId);
   } catch (error) {
-    console.error('Error setting model:', error);
+    console.error("Error setting model:", error);
   }
 }
 
 async function init() {
-  const storeSettings = await Store.load('settings.json');
-  storeMain = await Store.load('main.json');
+  const storeSettings = await Store.load("settings.json");
+  storeMain = await Store.load("main.json");
 
-  const models: ModelInfo[] = await invoke<ModelInfo[]>('get_available_models');
-  console.log('Available models:', models);
+  const models: ModelInfo[] = await invoke<ModelInfo[]>("get_available_models");
+  console.log("Available models:", models);
 
   // Populate model select options
   for (let i = 0; i < models.length; i++) {
-    const option = document.createElement('option');
+    const option = document.createElement("option");
     option.value = String(i);
     option.textContent = models[i].display_name;
     modelSelectEl.appendChild(option);
   }
-  const savedModel = await storeSettings.get<string>('current_model');
+  const savedModel = await storeSettings.get<string>("current_model");
   if (savedModel) {
     const idx = models.findIndex((x) => x.id === savedModel);
 
     if (idx >= 0) {
       modelSelectEl.selectedIndex = idx;
 
-      await invoke('set_current_model', {
+      await invoke("set_current_model", {
         modelId: savedModel,
       });
     }
@@ -84,10 +84,11 @@ async function init() {
   const sessions = await loadSessions();
   const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
-    let width = session.width && (session.width > 0.0 ? session.width : 1200.0);
-    let height = session.height && session.height > 0.0 ? session.height : 800.0;
+    let width = session.width && session.width > 0.0 ? session.width : 1200.0;
+    let height =
+      session.height && session.height > 0.0 ? session.height : 800.0;
 
-    await invoke('open_analysis_window', {
+    await invoke("open_analysis_window", {
       sessionId: session.id,
       width,
       height,
@@ -95,36 +96,36 @@ async function init() {
     });
   }
 
-  modelSelectEl.addEventListener('change', async () => {
+  modelSelectEl.addEventListener("change", async () => {
     const selectedModel = models[modelSelectEl.selectedIndex];
     setCurrentModel(selectedModel.id);
-    await storeSettings.set('current_model', selectedModel.id);
+    await storeSettings.set("current_model", selectedModel.id);
 
     await storeSettings.save();
   });
 
   // load
-  const savedInput = await storeMain.get<string>('inputText');
+  const savedInput = await storeMain.get<string>("inputText");
   if (savedInput) {
     inputEl.value = savedInput;
   }
 
-  const savedSentences = await storeMain.get<string>('sentenceList');
+  const savedSentences = await storeMain.get<string>("sentenceList");
   if (savedSentences) {
     sentenceListEl.value = savedSentences;
   }
 
   // scheduled save
-  inputEl.addEventListener('input', scheduleSave);
-  sentenceListEl.addEventListener('input', scheduleSave);
+  inputEl.addEventListener("input", scheduleSave);
+  sentenceListEl.addEventListener("input", scheduleSave);
 
-  clearBtnEl.addEventListener('click', () => {
-    inputEl.value = '';
+  clearBtnEl.addEventListener("click", () => {
+    inputEl.value = "";
   });
 
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
   pasteHtmlBtnEl.addEventListener(
-    'click',
+    "click",
 
     async () => {
       const items = await navigator.clipboard.read();
@@ -132,56 +133,56 @@ async function init() {
       for (const item of items) {
         console.log(item.types);
 
-        if (item.types.includes('text/html')) {
-          const blob = await item.getType('text/html');
+        if (item.types.includes("text/html")) {
+          const blob = await item.getType("text/html");
           const html = await blob.text();
           inputEl.value = html;
           return;
         }
       }
-      alert('No HTML content found in clipboard.');
+      alert("No HTML content found in clipboard.");
     },
   );
 
-  pasteTextBtnEl.addEventListener('click', async () => {
+  pasteTextBtnEl.addEventListener("click", async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (!text) {
-        alert('No text content found in clipboard.');
+        alert("No text content found in clipboard.");
         return;
       }
       inputEl.value = text;
     } catch (error) {
-      console.error('Failed to read clipboard contents: ', error);
+      console.error("Failed to read clipboard contents: ", error);
     }
   });
 
   // Split Handler: Sends the input text to the Rust backend for splitting and updates the sentence list textarea
-  splitBtnEl.addEventListener('click', async () => {
+  splitBtnEl.addEventListener("click", async () => {
     let text = inputEl.value.trim();
     if (!text) {
-      alert('Please enter some text to split.');
+      alert("Please enter some text to split.");
       return;
     }
     let doneHtmlParsing = false;
     do {
       try {
         if (!text) {
-          alert('Please enter some text to split.');
+          alert("Please enter some text to split.");
           return;
         }
         // check if first letter is "<" and last letter is ">"
-        if (!text.trim().startsWith('<') || !text.trim().endsWith('>')) {
-          console.log('Text does not appear to be HTML, skipping HTML parsing');
+        if (!text.trim().startsWith("<") || !text.trim().endsWith(">")) {
+          console.log("Text does not appear to be HTML, skipping HTML parsing");
           break;
         }
 
         const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
+        const doc = parser.parseFromString(text, "text/html");
         // sanitize the text by extracting text content from common block-level elements
-        doc.querySelectorAll('script, style').forEach((x) => x.remove());
+        doc.querySelectorAll("script, style").forEach((x) => x.remove());
 
-        const BLOCK_SELECTOR = 'p, div, li, h1, h2';
+        const BLOCK_SELECTOR = "p, div, li, h1, h2";
         const paragraphs = doc.querySelectorAll(BLOCK_SELECTOR);
         const blocks: string[] = [];
 
@@ -206,30 +207,30 @@ async function init() {
         }
 
         if (blocks.length !== 0) {
-          sentenceListEl.value = blocks.join('\n\n');
+          sentenceListEl.value = blocks.join("\n\n");
           doneHtmlParsing = true;
         }
       } catch (e) {
-        console.error('Error parsing HTML:', e);
+        console.error("Error parsing HTML:", e);
       }
     } while (false);
 
     if (!doneHtmlParsing) {
       const text = inputEl.value.trim();
       try {
-        let t = await invoke<string[]>('split_text', { text });
-        sentenceListEl.value = t.join('\n\n');
+        let t = await invoke<string[]>("split_text", { text });
+        sentenceListEl.value = t.join("\n\n");
       } catch (e) {
-        console.error('Error invoking split_text:', e);
-        alert('Failed to split text:\n\n' + String(e));
+        console.error("Error invoking split_text:", e);
+        alert("Failed to split text:\n\n" + String(e));
       }
     }
   });
 
-  resplitBtnEl.addEventListener('click', async () => {
+  resplitBtnEl.addEventListener("click", async () => {
     const text = sentenceListEl.value.trim();
     if (!text) {
-      alert('Please enter some sentences to re-split.');
+      alert("Please enter some sentences to re-split.");
       return;
     }
     const resultSentences: string[] = [];
@@ -242,19 +243,19 @@ async function init() {
         continue;
       }
       try {
-        let t = await invoke<string[]>('split_text', { text: sentence });
+        let t = await invoke<string[]>("split_text", { text: sentence });
         resultSentences.push(...t);
       } catch (e) {
-        console.error('Error invoking split_text:', e);
-        alert('Failed to split text:\n\n' + String(e));
+        console.error("Error invoking split_text:", e);
+        alert("Failed to split text:\n\n" + String(e));
         return;
       }
     }
-    sentenceListEl.value = resultSentences.join('\n\n');
+    sentenceListEl.value = resultSentences.join("\n\n");
   });
 
   // Analyze Handler: Sends the sentences to the Rust backend for analysis
-  analyzeBtnEl.addEventListener('click', async () => {
+  analyzeBtnEl.addEventListener("click", async () => {
     const text = sentenceListEl.value;
     const sentences = text
       .split(/\n{2,}/)
@@ -262,11 +263,11 @@ async function init() {
       .filter((s) => s.length > 0);
 
     if (sentences.length === 0) {
-      alert('Please enter some sentences to analyze.');
+      alert("Please enter some sentences to analyze.");
       return;
     }
 
-    const sessionId = 'analysis-' + crypto.randomUUID();
+    const sessionId = "analysis-" + crypto.randomUUID();
     const session = {
       id: sessionId,
 
@@ -275,8 +276,8 @@ async function init() {
       states: sentences.map((s) => ({
         sentence: s,
         sentenceResult: null,
-        userQuestion: '',
-        askAnswer: '',
+        userQuestion: "",
+        askAnswer: "",
       })),
       isOpen: true,
     };
@@ -284,10 +285,10 @@ async function init() {
     saveSession(session);
 
     const [width, height] = await invoke<[number, number]>(
-      'get_default_analysis_size',
+      "get_default_analysis_size",
     );
-    console.log('default analysis window size', width, height);
-    await invoke('open_analysis_window', {
+    console.log("default analysis window size", width, height);
+    await invoke("open_analysis_window", {
       sessionId,
       width,
       height,
@@ -306,7 +307,7 @@ async function init() {
     // }
   });
 
-  appWindow.listen('queue_progress', async (event) => {
+  appWindow.listen("queue_progress", async (event) => {
     const { running, total } = event.payload as {
       running: number;
       total: number;
@@ -318,21 +319,21 @@ async function init() {
     await getCurrentWindow().setTitle(title);
   });
 
-  appWindow.listen('analysys_closed', async (event) => {
+  appWindow.listen("analysys_closed", async (event) => {
     const label = event.payload as string;
     let ses = await loadSession(label);
     if (!ses) {
-      console.log('ses is null');
+      console.log("ses is null");
       return;
     }
     ses.isOpen = false;
     saveSession(ses);
   });
 
-  appWindow.listen('will_close', async () => {
+  appWindow.listen("will_close", async () => {
     setTimeout(async () => {
       await saveState();
-      await invoke('exit_app');
+      await invoke("exit_app");
     }, 1000);
   });
 }
