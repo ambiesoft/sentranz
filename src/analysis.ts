@@ -12,8 +12,12 @@ import Mark from "mark.js";
 // marked.setOptions({
 //   breaks: true,
 // });
-marked.use(markedKatex());
-
+marked.use(
+  markedKatex({
+    throwOnError: false,
+    strict: false,
+  }),
+);
 type AskAiResponse = {
   index: number;
   response: string;
@@ -112,7 +116,13 @@ function scheduleSave() {
   }, 500);
 }
 function renderAnswer(text: string): string {
-  return DOMPurify.sanitize(marked.parse(text) as string);
+  try {
+    const nkfedText = text.normalize("NFKC");
+    return DOMPurify.sanitize(marked.parse(nkfedText) as string);
+  } catch (e) {
+    console.error(e);
+    return text;
+  }
 }
 function showError(message: string) {
   errorMessageEl.textContent = message;
@@ -193,7 +203,7 @@ async function init() {
   for (let i = 0; i < session.states.length; i++) {
     const option = document.createElement("option");
     option.value = String(i);
-    option.textContent = `Sentence ${i + 1}`;
+    option.textContent = `Sentence ${i + 1} / ${session.states.length}`;
     sentenceSelectEl.appendChild(option);
   }
 
@@ -361,7 +371,7 @@ async function startAnalyze(startIndex: number, count: number) {
 
       function getPreviousSentences(index: number, count: number): string[] {
         const sentences: string[] = [];
-        for (let i = index - count; i < index; i++) {
+        for (let i = Math.max(index - count, 0); i < index; i++) {
           if (i >= 0) {
             sentences.push(session.states[i].sentence);
           } else {
@@ -571,8 +581,8 @@ async function registerWindowEvents() {
       session.height = payload.height / scale;
 
       await invoke("set_default_analysis_size", {
-        width: session.width,
-        height: session.height,
+        width: Math.trunc(session.width),
+        height: Math.trunc(session.height),
       });
 
       scheduleSave();

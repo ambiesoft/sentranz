@@ -115,6 +115,11 @@ Use the surrounding context when needed to resolve:
 - ambiguous words
 
 Answer in Japanese.
+Please answer in Markdown.
+
+Do not use LaTeX.
+Do not use $...$ expressions.
+Use plain text for variables such as x, y, and z.
 "#,
     prev_sentences.join("\n"),
     sentence,
