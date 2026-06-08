@@ -203,7 +203,7 @@ async function init() {
   for (let i = 0; i < session.states.length; i++) {
     const option = document.createElement("option");
     option.value = String(i);
-    option.textContent = `Sentence ${i + 1} / ${session.states.length}`;
+    option.textContent = `${i + 1} / ${session.states.length}`;
     sentenceSelectEl.appendChild(option);
   }
 
