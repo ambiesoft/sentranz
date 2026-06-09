@@ -30,6 +30,7 @@ type JobError = {
   index: number;
   message: string;
   raw_response?: string;
+  model: string;
 };
 
 const sentencePaneEl = document.querySelector(
@@ -276,6 +277,7 @@ async function registerListers() {
         original: session.states[error.index].sentence,
         answer: "",
         analysis_error: `Error: ${error.message}\n\n${error.raw_response || ""}`,
+        model: error.model,
       };
     }
     renderCurrentData(error.index);

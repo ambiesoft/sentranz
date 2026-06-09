@@ -160,6 +160,7 @@ Use plain text for variables such as x, y, and z.
                                 index,
                                 message: format!("LLM request error: {}", e),
                                 raw_response: None,
+                                model: provider.model,
                             },
                         );
                         return;
@@ -240,6 +241,7 @@ Explain clearly and briefly."#,
                                 index,
                                 message: format!("LLM request error: {}", e),
                                 raw_response: None,
+                                model: provider.model,
                             },
                         );
                         return;
