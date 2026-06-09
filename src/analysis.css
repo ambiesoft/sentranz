@@ -188,3 +188,6 @@ body {
 .both-open .ask-panel {
   flex: 1;
 }
+.model {
+  color: grey;
+}

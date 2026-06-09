@@ -7,9 +7,10 @@ mod queue;
 mod state;
 mod text;
 
-use state::AppState;
+use state::{AppState, MainWindowState};
 use tauri::{Emitter, Manager, WindowEvent};
 
+use std::fs;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -37,12 +38,49 @@ pub fn run() {
             let state = app.state::<AppState>().inner().clone();
             let app_handle2 = app_handle.clone();
             let state2 = state.clone();
+
+            let path = app.path().app_data_dir()?.join("main_back.json");
+            let size_state = match fs::read_to_string(&path) {
+                Ok(s) => match serde_json::from_str::<MainWindowState>(&s) {
+                    Ok(state) => state,
+                    Err(e) => {
+                        eprintln!("Failed to parse {:?}: {}", path, e);
+
+                        MainWindowState {
+                            width: 1200.0,
+                            height: 800.0,
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Failed to read {:?}: {}", path, e);
+
+                    MainWindowState {
+                        width: 1200.0,
+                        height: 800.0,
+                    }
+                }
+            };
+
+            let mut builder = tauri::WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .title("sentranz");
+
+            if size_state.width > 0.0 && size_state.height > 0.0 {
+                builder = builder.inner_size(size_state.width, size_state.height)
+            }
+            builder.build()?;
+
             tauri::async_runtime::spawn(async move {
                 queue::llm_analysis_loop(app_handle, state).await;
             });
             tauri::async_runtime::spawn(async move {
                 queue::llm_ask_loop(app_handle2, state2).await;
             });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -67,6 +105,32 @@ pub fn run() {
                 // main closed?
                 //
                 if window.label() == "main" {
+                    // save size
+                    if !window.is_minimized().unwrap_or(false)
+                        && !window.is_maximized().unwrap_or(false)
+                    {
+                        if let Ok(size) = window.inner_size() {
+                            let scale = window.scale_factor().unwrap_or(1.0);
+
+                            let logical_width = size.width as f64 / scale;
+                            let logical_height = size.height as f64 / scale;
+
+                            let state = MainWindowState {
+                                width: logical_width,
+                                height: logical_height,
+                            };
+
+                            if let Ok(app_data_dir) = window.app_handle().path().app_data_dir() {
+                                let _ = fs::create_dir_all(&app_data_dir);
+                                let path = app_data_dir.join("main_back.json");
+
+                                if let Ok(json) = serde_json::to_string_pretty(&state) {
+                                    let _ = fs::write(path, json);
+                                }
+                            }
+                        }
+                    }
+
                     // hide all windows
                     state.shutting_down.store(true, Ordering::SeqCst);
                     for (_, w) in app.webview_windows() {

@@ -106,6 +106,15 @@ pub async fn open_analysis_window(
     height: f64,
     start_analysis: bool,
 ) -> Result<(), String> {
+    // Already exist?
+    if let Some(window) = app.get_webview_window(&session_id) {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+
+        return Ok(());
+    }
+
     let window = WebviewWindowBuilder::new(
         &app,
         session_id.clone(),

@@ -12,10 +12,18 @@ impl OpenAiProvider {
     pub async fn chat(&self, messages: Vec<Message>) -> Result<String, String> {
         let client = Client::new();
 
+        let (temperature, repetition_penalty, max_tokens) = if self.model.contains("qwen3-vl-4b") {
+            (0.7, Some(1.15), Some(1600))
+        } else {
+            (0.0, None, None)
+        };
+
         let req = ChatRequest {
             model: self.model.clone(),
             messages,
-            temperature: 0.0,
+            temperature,
+            repetition_penalty,
+            max_tokens,
         };
 
         let mut builder = client.post(&self.endpoint).json(&req);

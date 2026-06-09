@@ -3,6 +3,7 @@ export type SentenceResult = {
   original: string;
   answer: string;
   analysis_error: string;
+  model: string;
 };
 export type State = {
   sentence: string;
@@ -22,4 +23,6 @@ export type AnalysisSession = {
   width?: number;
   height?: number;
   title?: string;
+  created_at: string;
+  updated_at?: string;
 };

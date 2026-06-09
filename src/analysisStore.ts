@@ -6,12 +6,12 @@ import {
   readTextFile,
   remove,
   writeTextFile,
-} from '@tauri-apps/plugin-fs';
+} from "@tauri-apps/plugin-fs";
 
-import { AnalysisSession } from './type';
+import { AnalysisSession } from "./type";
 
-const DIR = 'analyses';
-const EXTENSION = '.json';
+const DIR = "analyses";
+const EXTENSION = ".json";
 
 async function ensureDir() {
   const ok = await exists(DIR, {
@@ -45,7 +45,7 @@ export async function loadSession(sessionId: string) {
   let session = JSON.parse(text) as AnalysisSession;
   for (const state of session.states) {
     if (state.sentenceResult) {
-      state.progressMessage = 'Loaded from previous session';
+      state.progressMessage = "Loaded from previous session";
     }
   }
   return session;
@@ -53,6 +53,7 @@ export async function loadSession(sessionId: string) {
 
 export async function saveSession(session: AnalysisSession) {
   await ensureDir();
+  session.updated_at = new Date().toUTCString();
   const path = `${DIR}/${session.id}${EXTENSION}`;
   await writeTextFile(path, JSON.stringify(session, null, 2), {
     baseDir: BaseDirectory.AppData,
@@ -72,11 +73,15 @@ export async function loadSessions() {
     if (!entry.name?.endsWith(EXTENSION)) {
       continue;
     }
+    const id = entry.name.slice(0, -EXTENSION.length);
+    try {
+      const session = await loadSession(id);
 
-    const session = await loadSession(entry.name.slice(0, -EXTENSION.length));
-
-    if (session) {
-      sessions.push(session);
+      if (session) {
+        sessions.push(session);
+      }
+    } catch (e) {
+      console.error(id, e);
     }
   }
 

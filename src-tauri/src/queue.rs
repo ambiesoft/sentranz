@@ -77,7 +77,12 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
     };
 
     match job.kind {
-        LlmJobKind::AnalyzeSentence { index,  prev_sentences,sentence, after_sentences } => {
+        LlmJobKind::AnalyzeSentence {
+            index,
+            prev_sentences,
+            sentence,
+            after_sentences,
+        } => {
             eprint!(
                 "Analyzing sentence with label {}: {}\n",
                 job.window_label, sentence
@@ -94,7 +99,7 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
                 };
 
                 let prompt = format!(
-r#"
+                    r#"
 Context:
 
 {}
@@ -121,14 +126,14 @@ Do not use LaTeX.
 Do not use $...$ expressions.
 Use plain text for variables such as x, y, and z.
 "#,
-    prev_sentences.join("\n"),
-    sentence,
-    after_sentences.join("\n")
-);
+                    prev_sentences.join("\n"),
+                    sentence,
+                    after_sentences.join("\n")
+                );
 
                 #[cfg(debug_assertions)]
                 println!("Prompt:\n{}\n", prompt);
-                
+
                 let messages = vec![Message {
                     role: "user".into(),
                     content: prompt,
@@ -169,6 +174,7 @@ Use plain text for variables such as x, y, and z.
                     original: sentence,
                     answer: response,
                     analysis_error: "".into(),
+                    model: provider.model,
                 };
 
                 let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);

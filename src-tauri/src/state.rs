@@ -1,10 +1,12 @@
 use crate::models::LlmJob;
 // use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::sync::Mutex;
+
 #[derive(Clone)]
 pub struct AppState {
     pub current_model: Arc<Mutex<ModelConfig>>,
@@ -22,4 +24,10 @@ pub struct ModelConfig {
     pub id: String,
     pub endpoint: String,
     pub api_key: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MainWindowState {
+    pub width: f64,
+    pub height: f64,
 }

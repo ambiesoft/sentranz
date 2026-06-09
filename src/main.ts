@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Store } from "@tauri-apps/plugin-store";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { loadSession, loadSessions, saveSession } from "./analysisStore";
+import { AnalysisSession } from "./type";
 
 type ModelInfo = {
   id: string;
@@ -25,6 +26,10 @@ const resplitBtnEl = document.querySelector<HTMLButtonElement>("#resplit-btn")!;
 const analyzeBtnEl = document.querySelector<HTMLButtonElement>("#analyze-btn")!;
 const sentenceListEl =
   document.querySelector<HTMLTextAreaElement>("#sentence-list")!;
+const recentList = document.getElementById("recent-list") as HTMLDivElement;
+const refreshRecentBtnEl = document.getElementById(
+  "refresh-recent-btn",
+) as HTMLButtonElement;
 
 const appWindow = getCurrentWindow();
 
@@ -37,7 +42,7 @@ async function saveState() {
 
   await storeMain.save();
 }
-function scheduleSave() {
+function scheduleSateSave() {
   clearTimeout(saveTimer);
   saveTimer = window.setTimeout(saveState, 1000);
 }
@@ -50,10 +55,66 @@ async function setCurrentModel(modelId: string) {
     console.error("Error setting model:", error);
   }
 }
+async function renderRecentDocuments(sessions: AnalysisSession[]) {
+  recentList.innerHTML = "";
+
+  for (const session of sessions.slice(0, 20)) {
+    const item = document.createElement("div");
+    item.className = "recent-item";
+
+    const title =
+      session.title ??
+      session.states[0]?.sentence.slice(0, 80) ??
+      "(empty document)";
+
+    item.innerHTML = `
+      <div class="recent-title">
+        ${escapeHTML(title)}
+      </div>
+
+      <div class="recent-meta">
+        ${session.states.length} sentences
+        ·
+        ${session.updated_at ? new Date(session.updated_at).toLocaleString() : "(unknown)"}
+      </div>
+    `;
+
+    item.addEventListener("click", async () => {
+      let width = session.width && session.width > 0.0 ? session.width : 1200.0;
+      let height =
+        session.height && session.height > 0.0 ? session.height : 800.0;
+
+      await invoke("open_analysis_window", {
+        sessionId: session.id,
+        width,
+        height,
+        startAnalysis: false,
+      });
+    });
+
+    recentList.appendChild(item);
+  }
+}
+function escapeHTML(str: string) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function refreshRecentDocuments(sessions: AnalysisSession[]) {
+  // recent documents
+  sessions.sort((a, b) => {
+    const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  renderRecentDocuments(sessions);
+}
 
 async function init() {
   const storeSettings = await Store.load("settings.json");
-  storeMain = await Store.load("main.json");
+  storeMain = await Store.load("main_front.json");
 
   const models: ModelInfo[] = await invoke<ModelInfo[]>("get_available_models");
   console.log("Available models:", models);
@@ -82,6 +143,9 @@ async function init() {
 
   // load analyses
   const sessions = await loadSessions();
+
+  refreshRecentDocuments(sessions);
+
   const openSessions = sessions.filter((s) => s.isOpen).reverse();
   for (let session of openSessions) {
     let width = session.width && session.width > 0.0 ? session.width : 1200.0;
@@ -116,8 +180,8 @@ async function init() {
   }
 
   // scheduled save
-  inputEl.addEventListener("input", scheduleSave);
-  sentenceListEl.addEventListener("input", scheduleSave);
+  inputEl.addEventListener("input", scheduleSateSave);
+  sentenceListEl.addEventListener("input", scheduleSateSave);
 
   clearBtnEl.addEventListener("click", () => {
     inputEl.value = "";
@@ -280,6 +344,7 @@ async function init() {
         askAnswer: "",
       })),
       isOpen: true,
+      created_at: new Date().toUTCString(),
     };
 
     saveSession(session);
@@ -294,6 +359,10 @@ async function init() {
       height,
       startAnalysis: true,
     });
+  });
+
+  refreshRecentBtnEl.addEventListener("click", async () => {
+    refreshRecentDocuments(await loadSessions());
   });
 
   // let count = 0;
@@ -336,5 +405,5 @@ async function init() {
       await invoke("exit_app");
     }, 1000);
   });
-}
+} // end of init()
 init();

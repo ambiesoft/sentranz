@@ -153,7 +153,10 @@ function renderCurrentData(index: number) {
   if (result) {
     const savedWordInfoScrollTop =
       session.states[session.currentIndex].wordInfoScrollTop ?? 0;
-    wordInfoEl.innerHTML = renderAnswer(result.answer);
+    wordInfoEl.innerHTML =
+      renderAnswer(result.answer) +
+      `
+    <div class="model">Answered by ${result.model}</div>`;
     requestAnimationFrame(() => {
       wordInfoEl.scrollTop = savedWordInfoScrollTop;
     });

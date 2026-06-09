@@ -7,6 +7,7 @@ pub struct SentenceResult {
     pub original: String,
     pub answer: String,
     pub analysis_error: String,
+    pub model: String,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
