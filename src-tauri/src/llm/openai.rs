@@ -34,8 +34,8 @@ impl OpenAiProvider {
 
         let res = builder.send().await.map_err(|e| e.to_string())?;
 
-        #[cfg(debug_assertions)]
-        println!("OpenAI response: {:?}", res);
+        // #[cfg(debug_assertions)]
+        // println!("OpenAI response: {:?}", res);
 
         let body = res.text().await.map_err(|e| e.to_string())?;
 

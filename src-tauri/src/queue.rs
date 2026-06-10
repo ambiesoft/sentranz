@@ -83,10 +83,10 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
             sentence,
             after_sentences,
         } => {
-            eprint!(
-                "Analyzing sentence with label {}: {}\n",
-                job.window_label, sentence
-            );
+            // eprint!(
+            //     "Analyzing sentence with label {}: {}\n",
+            //     job.window_label, sentence
+            // );
             if let Some(window) = app.get_webview_window(&job.window_label) {
                 // window found, continue processing
 
@@ -132,7 +132,10 @@ Use plain text for variables such as x, y, and z.
                 );
 
                 #[cfg(debug_assertions)]
-                println!("Prompt:\n{}\n", prompt);
+                eprintln!(
+                    "Prompt starts---------->\n{}\n<----------Prompt ends",
+                    prompt
+                );
 
                 let messages = vec![Message {
                     role: "user".into(),
@@ -167,8 +170,8 @@ Use plain text for variables such as x, y, and z.
                     }
                 };
 
-                #[cfg(debug_assertions)]
-                println!("RAW:\n{}", response);
+                // #[cfg(debug_assertions)]
+                // println!("RAW:\n{}", response);
 
                 let result = SentenceResult {
                     index,
@@ -248,8 +251,8 @@ Explain clearly and briefly."#,
                     }
                 };
 
-                #[cfg(debug_assertions)]
-                println!("RAW:\n{}", response);
+                // #[cfg(debug_assertions)]
+                // println!("RAW:\n{}", response);
 
                 let payload = AskAiResponse { index, response };
                 let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);

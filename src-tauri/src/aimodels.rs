@@ -21,13 +21,8 @@ pub async fn get_available_models() -> Result<Vec<ModelInfo>, String> {
             provider: "Google".into(),
         },
         ModelInfo {
-            id: "bullerwins/translategemma-12b-it-GGUF".into(),
-            display_name: "TranslateGemma 12B IT GGUF".into(),
-            provider: "Bullerwins".into(),
-        },
-        ModelInfo {
-            id: "lmstudio-community/DeepSeek-R1-Distill-Qwen-14B-GGUF".into(),
-            display_name: "DeepSeek R1 Distill Qwen 14B GGUF".into(),
+            id: "qwen3.5-27b".into(),
+            display_name: "qwen3.5-27b".into(),
             provider: "LM Studio Community".into(),
         },
     ])
