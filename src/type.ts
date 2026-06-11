@@ -4,7 +4,9 @@ export type SentenceResult = {
   answer: string;
   analysis_error: string;
   model: string;
-  totalTokens: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
 };
 export type State = {
   sentence: string;

@@ -184,6 +184,8 @@ Use plain text for variables such as x, y, and z.
                     answer: response.content,
                     analysis_error: "".into(),
                     model: response.model,
+                    prompt_tokens: response.prompt_tokens,
+                    completion_tokens: response.completion_tokens,
                     total_tokens: response.total_tokens,
                 };
 

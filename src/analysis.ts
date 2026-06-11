@@ -161,7 +161,7 @@ function renderCurrentData(index: number) {
       `
   <div class="usage">
     <span>Model: ${result.model || "Unknown"}</span>
-    <span>Tokens: ${result.totalTokens}</span>
+    <span>Tokens: ${result.total_tokens} (${result.prompt_tokens} in / ${result.completion_tokens} out)</span>
   </div>`;
     requestAnimationFrame(() => {
       wordInfoEl.scrollTop = savedWordInfoScrollTop;
@@ -283,7 +283,9 @@ async function registerListers() {
         answer: "",
         analysis_error: `Error: ${error.message}\n\n${error.raw_response || ""}`,
         model: error.model,
-        totalTokens: 0,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
       };
     }
     renderCurrentData(error.index);

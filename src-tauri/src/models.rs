@@ -8,6 +8,8 @@ pub struct SentenceResult {
     pub answer: String,
     pub analysis_error: String,
     pub model: String,
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
     pub total_tokens: u32,
 }
 
