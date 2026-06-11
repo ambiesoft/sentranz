@@ -8,6 +8,7 @@ pub struct SentenceResult {
     pub answer: String,
     pub analysis_error: String,
     pub model: String,
+    pub total_tokens: u32,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -21,6 +22,8 @@ pub struct ModelInfo {
 pub struct AskAiResponse {
     pub index: usize,
     pub response: String,
+    pub model: String,
+    pub total_tokens: u32,
 }
 
 #[derive(Clone)]

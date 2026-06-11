@@ -21,6 +21,8 @@ marked.use(
 type AskAiResponse = {
   index: number;
   response: string;
+  model: string;
+  total_tokens: number;
 };
 type JobProgress = {
   index: number;
@@ -157,7 +159,10 @@ function renderCurrentData(index: number) {
     wordInfoEl.innerHTML =
       renderAnswer(result.answer) +
       `
-    <div class="model">Answered by ${result.model}</div>`;
+  <div class="usage">
+    <span>Model: ${result.model || "Unknown"}</span>
+    <span>Tokens: ${result.totalTokens}</span>
+  </div>`;
     requestAnimationFrame(() => {
       wordInfoEl.scrollTop = savedWordInfoScrollTop;
     });
@@ -278,6 +283,7 @@ async function registerListers() {
         answer: "",
         analysis_error: `Error: ${error.message}\n\n${error.raw_response || ""}`,
         model: error.model,
+        totalTokens: 0,
       };
     }
     renderCurrentData(error.index);
@@ -288,7 +294,8 @@ async function registerListers() {
     const response = event.payload as AskAiResponse;
     const index = response.index;
     session.states[index].askAnswer = response.response;
-
+    session.states[index].askModel = response.model;
+    session.states[index].askTokens = response.total_tokens;
     renderCurrentData(index);
 
     askBtnEl.disabled = false;

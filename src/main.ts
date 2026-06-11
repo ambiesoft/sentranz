@@ -342,6 +342,8 @@ async function init() {
         sentenceResult: null,
         userQuestion: "",
         askAnswer: "",
+        askModel: "",
+        askTokens: 0,
       })),
       isOpen: true,
       created_at: new Date().toUTCString(),

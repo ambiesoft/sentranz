@@ -188,6 +188,16 @@ body {
 .both-open .ask-panel {
   flex: 1;
 }
-.model {
-  color: grey;
+.usage {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  margin-top: 16px;
+  padding-top: 8px;
+
+  border-top: 1px solid #ddd;
+
+  color: #666;
 }

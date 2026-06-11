@@ -4,6 +4,7 @@ export type SentenceResult = {
   answer: string;
   analysis_error: string;
   model: string;
+  totalTokens: number;
 };
 export type State = {
   sentence: string;
@@ -13,6 +14,8 @@ export type State = {
   askAnswer: string;
   wordInfoScrollTop?: number;
   askAnswerScrollTop?: number;
+  askModel: string;
+  askTokens: number;
 };
 
 export type AnalysisSession = {

@@ -170,15 +170,21 @@ Use plain text for variables such as x, y, and z.
                     }
                 };
 
-                // #[cfg(debug_assertions)]
-                // println!("RAW:\n{}", response);
+                eprintln!(
+                    "Model={} Prompt={} Completion={} Total={}",
+                    response.model,
+                    response.prompt_tokens,
+                    response.completion_tokens,
+                    response.total_tokens,
+                );
 
                 let result = SentenceResult {
                     index,
                     original: sentence,
-                    answer: response,
+                    answer: response.content,
                     analysis_error: "".into(),
-                    model: provider.model,
+                    model: response.model,
+                    total_tokens: response.total_tokens,
                 };
 
                 let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);
@@ -251,10 +257,12 @@ Explain clearly and briefly."#,
                     }
                 };
 
-                // #[cfg(debug_assertions)]
-                // println!("RAW:\n{}", response);
-
-                let payload = AskAiResponse { index, response };
+                let payload = AskAiResponse {
+                    index,
+                    response: response.content,
+                    model: response.model,
+                    total_tokens: response.total_tokens,
+                };
                 let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
             } else {
                 eprintln!("window not found: {}", job.window_label);
