@@ -170,6 +170,7 @@ Use plain text for variables such as x, y, and z.
                     }
                 };
 
+                #[cfg(debug_assertions)]
                 eprintln!(
                     "Model={} Prompt={} Completion={} Total={}",
                     response.model,
@@ -201,6 +202,7 @@ Use plain text for variables such as x, y, and z.
             sentence,
             question,
         } => {
+            #[cfg(debug_assertions)]
             eprint!(
                 "Asking AI question with label {}: {}\n",
                 job.window_label, sentence
