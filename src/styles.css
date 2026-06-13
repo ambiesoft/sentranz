@@ -71,11 +71,27 @@ body {
   background: #f5f5f5;
 }
 
-.recent-title {
-  font-weight: bold;
-}
-
 .recent-meta {
   color: #666;
   font-size: 0.9em;
+}
+.recent-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recent-title {
+  flex: 1;
+  min-width: 0;
+
+  font-weight: bold;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-delete-btn {
+  flex-shrink: 0;
 }

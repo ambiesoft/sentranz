@@ -4,7 +4,12 @@ import "./styles.css";
 import { invoke } from "@tauri-apps/api/core";
 import { Store } from "@tauri-apps/plugin-store";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { loadSession, loadSessions, saveSession } from "./analysisStore";
+import {
+  loadSession,
+  loadSessions,
+  saveSession,
+  deleteSession,
+} from "./analysisStore";
 import { AnalysisSession } from "./type";
 
 type ModelInfo = {
@@ -65,16 +70,24 @@ async function renderRecentDocuments(sessions: AnalysisSession[]) {
     const title = session.title || "(no title)";
 
     item.innerHTML = `
-      <div class="recent-title">
-        ${escapeHTML(title)}
-      </div>
+  <div class="recent-header">
+    <div class="recent-title">
+      ${escapeHTML(title)}
+    </div>
 
-      <div class="recent-meta">
-        ${session.states.length} sentences
-        ·
-        ${session.updated_at ? new Date(session.updated_at).toLocaleString() : "(unknown)"}
-      </div>
-    `;
+    <button class="recent-delete-btn">Delete</button>
+  </div>
+
+  <div class="recent-meta">
+    ${session.states.length} sentences
+    ·
+    ${
+      session.updated_at
+        ? new Date(session.updated_at).toLocaleString()
+        : "(unknown)"
+    }
+  </div>
+`;
 
     item.addEventListener("click", async () => {
       let width = session.width && session.width > 0.0 ? session.width : 1200.0;
@@ -88,6 +101,27 @@ async function renderRecentDocuments(sessions: AnalysisSession[]) {
         startAnalysis: false,
       });
     });
+
+    item
+      .querySelector(".recent-delete-btn")
+      ?.addEventListener("click", async (e) => {
+        // item の click が発火しないようにする
+        e.stopPropagation();
+
+        if (!confirm(`Delete "${title}"?\n\nThis action cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          await deleteSession(session.id);
+        } catch (e) {
+          console.log(e);
+          alert("Failed to delete document");
+          return;
+        }
+        // 再描画
+        refreshRecentDocuments(await loadSessions());
+      });
 
     recentList.appendChild(item);
   }
