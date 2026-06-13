@@ -62,10 +62,7 @@ async function renderRecentDocuments(sessions: AnalysisSession[]) {
     const item = document.createElement("div");
     item.className = "recent-item";
 
-    const title =
-      session.title ??
-      session.states[0]?.sentence.slice(0, 80) ??
-      "(empty document)";
+    const title = session.title || "(no title)";
 
     item.innerHTML = `
       <div class="recent-title">

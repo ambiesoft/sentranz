@@ -41,6 +41,7 @@ const sentencePaneEl = document.querySelector(
 const wordInfoEl = document.querySelector("#word-info") as HTMLDivElement;
 const prevBtnEl = document.querySelector("#prev-btn") as HTMLButtonElement;
 const nextBtnEl = document.querySelector("#next-btn") as HTMLButtonElement;
+const changeTitleBtnEl = document.querySelector("#change-title-btn") as HTMLButtonElement;
 const retryThisBtnEl = document.querySelector(
   "#retry-this-btn",
 ) as HTMLButtonElement;
@@ -230,6 +231,11 @@ async function init() {
     label,
     title: session.title,
   });
+
+  if (!session.isOpen) {
+    session.isOpen = true;
+    await saveSession(session);
+  }
 } // End of init function
 
 async function registerListers() {
@@ -483,6 +489,19 @@ async function registerDOMEvents() {
       renderCurrentData(session.currentIndex);
       scheduleSave();
     }
+  });
+
+  changeTitleBtnEl.addEventListener("click", async () => {
+    const newTitle = prompt("New Title", session.title);
+    if (!newTitle) {
+      return;
+    }
+    session.title = newTitle;
+    await invoke("set_document_title", {
+      label,
+      title: session.title,
+    });
+    scheduleSave();
   });
 
   sentenceSelectEl.addEventListener("change", () => {
