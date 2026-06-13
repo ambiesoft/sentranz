@@ -150,7 +150,9 @@ function renderCurrentData(index: number) {
     return;
   }
   sentenceSelectEl.value = String(session.currentIndex);
-  sentencePaneEl.textContent = session.states[session.currentIndex].sentence;
+  sentencePaneEl.innerHTML = session.states[
+    session.currentIndex
+  ].sentence.replace(/\n/g, "<br/>");
 
   const result = session.states[session.currentIndex].sentenceResult;
   if (result) {
@@ -199,9 +201,18 @@ async function init() {
   await registerWindowEvents();
   await registerListers();
 
-  const loadedSession = await loadSession(label);
-  if (!loadedSession) {
-    throw new Error("Failed to load analysis session");
+  let loadedSession;
+  try {
+    loadedSession = await loadSession(label);
+    if (!loadedSession) {
+      throw new Error("Failed to load analysis session");
+    }
+  } catch (e) {
+    console.error(e);
+    const message = e instanceof Error ? e.message : String(e);
+    alert(`Failed to load session.\n\n${message}`);
+    await getCurrentWindow().destroy();
+    return;
   }
   session = loadedSession;
   console.log("session loaded:", session);
