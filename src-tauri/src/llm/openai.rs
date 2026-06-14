@@ -15,7 +15,7 @@ impl OpenAiProvider {
         let (temperature, repetition_penalty, max_tokens) = if self.model.contains("qwen3-vl-4b") {
             (0.7, Some(1.15), Some(2500))
         } else {
-            (0.0, None, Some(2500))
+            (0.0, None, None)
         };
 
         let req = ChatRequest {
