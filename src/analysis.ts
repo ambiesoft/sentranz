@@ -8,6 +8,7 @@ import { marked } from "marked";
 import markedKatex from "marked-katex-extension";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 // marked.setOptions({
 //   breaks: true,
@@ -41,7 +42,12 @@ const sentencePaneEl = document.querySelector(
 const wordInfoEl = document.querySelector("#word-info") as HTMLDivElement;
 const prevBtnEl = document.querySelector("#prev-btn") as HTMLButtonElement;
 const nextBtnEl = document.querySelector("#next-btn") as HTMLButtonElement;
-const changeTitleBtnEl = document.querySelector("#change-title-btn") as HTMLButtonElement;
+const changeTitleBtnEl = document.querySelector(
+  "#change-title-btn",
+) as HTMLButtonElement;
+const copySentencesBtnEl = document.querySelector(
+  "#copy-sentences-btn",
+) as HTMLButtonElement;
 const retryThisBtnEl = document.querySelector(
   "#retry-this-btn",
 ) as HTMLButtonElement;
@@ -513,6 +519,20 @@ async function registerDOMEvents() {
       title: session.title,
     });
     scheduleSave();
+  });
+
+  copySentencesBtnEl.addEventListener("click", () => {
+    try {
+      const sentences = session.states
+        .map((state) => state.sentence?.trim())
+        .filter((s): s is string => !!s)
+        .join("\n\n");
+
+      writeText(sentences);
+    } catch (e) {
+      console.error("Failed to copy", e);
+      alert("Failed to copy to clipboard.");
+    }
   });
 
   sentenceSelectEl.addEventListener("change", () => {

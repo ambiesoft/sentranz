@@ -29,4 +29,5 @@ url = "2.5.8"
 pragmatic-segmenter = "0.1.3"
 tauri-plugin-store = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-clipboard-manager = "2"
 
