@@ -75,6 +75,7 @@ body {
   color: #666;
   font-size: 0.9em;
 }
+
 .recent-header {
   display: flex;
   align-items: center;
@@ -94,4 +95,72 @@ body {
 
 .recent-delete-btn {
   flex-shrink: 0;
+}
+
+/* settings dialog */
+.modal {
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: 900px;
+  height: 600px;
+
+  display: flex;
+  flex-direction: column;
+
+  background: white;
+  border-radius: 8px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+
+  padding: 12px;
+
+  border-bottom: 1px solid #ccc;
+}
+
+.modal-header h2 {
+  flex: 1;
+  margin: 0;
+}
+
+.settings-body {
+  flex: 1;
+
+  display: flex;
+
+  min-height: 0;
+}
+
+.model-list {
+  width: 280px;
+
+  border-right: 1px solid #ccc;
+
+  overflow: auto;
+}
+
+.model-editor {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  padding: 12px;
 }

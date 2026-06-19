@@ -12,15 +12,16 @@ import {
 } from "./analysisStore";
 import { AnalysisSession } from "./type";
 
-type ModelInfo = {
+type ModelConfig = {
   id: string;
-  display_name: string;
-  provider: string;
+  endpoint: string;
+  api_key?: string;
 };
 
 const inputEl = document.querySelector<HTMLTextAreaElement>("#input-text")!;
 const modelSelectEl =
   document.querySelector<HTMLSelectElement>("#model-select")!;
+const settingsBtnEl = document.querySelector<HTMLButtonElement>("#settings-btn")!;
 const clearBtnEl = document.querySelector<HTMLButtonElement>("#clear-btn")!;
 const pasteHtmlBtnEl =
   document.querySelector<HTMLButtonElement>("#paste-html-btn")!;
@@ -36,10 +37,24 @@ const refreshRecentBtnEl = document.getElementById(
   "refresh-recent-btn",
 ) as HTMLButtonElement;
 
+const settingsDialogEl = document.getElementById("settings-dialog") as HTMLDivElement;
+const settingsCloseBtnEl = document.querySelector<HTMLButtonElement>("#settings-close-btn")!;
+const modelListEl = document.getElementById("model-list") as HTMLDivElement;
+const modelNameEl =
+  document.getElementById("model-name") as HTMLInputElement;
+const modelIdEl =
+  document.getElementById("model-id") as HTMLInputElement;
+const modelEndpointEl =
+  document.getElementById("model-endpoint") as HTMLInputElement;
+const modelApiKeyEl =
+  document.getElementById("model-api-key") as HTMLInputElement;
+
 const appWindow = getCurrentWindow();
 
 let storeMain: Store;
 let saveTimer: number;
+let selectedModelIndex = -1;
+let models: ModelConfig[] = [];
 
 async function saveState() {
   await storeMain.set("inputText", inputEl.value);
@@ -52,14 +67,7 @@ function scheduleSateSave() {
   saveTimer = window.setTimeout(saveState, 1000);
 }
 
-async function setCurrentModel(modelId: string) {
-  try {
-    await invoke("set_current_model", { modelId });
-    console.log("Model set successfully:", modelId);
-  } catch (error) {
-    console.error("Error setting model:", error);
-  }
-}
+
 async function renderRecentDocuments(sessions: AnalysisSession[]) {
   recentList.innerHTML = "";
 
@@ -81,11 +89,10 @@ async function renderRecentDocuments(sessions: AnalysisSession[]) {
   <div class="recent-meta">
     ${session.states.length} sentences
     ·
-    ${
-      session.updated_at
+    ${session.updated_at
         ? new Date(session.updated_at).toLocaleString()
         : "(unknown)"
-    }
+      }
   </div>
 `;
 
@@ -143,33 +150,52 @@ function refreshRecentDocuments(sessions: AnalysisSession[]) {
   renderRecentDocuments(sessions);
 }
 
+function populateModelSelect() {
+  modelSelectEl.replaceChildren();
+
+  for (let i = 0; i < models.length; i++) {
+    const option = document.createElement("option");
+    option.value = String(i);
+    option.textContent = models[i].id;
+    modelSelectEl.appendChild(option);
+  }
+}
+function renderSettingsDialog() {
+  function loadModelIntoEditor(model: ModelConfig) {
+    modelNameEl.value = model.id ?? "";
+    modelIdEl.value = model.id ?? "";
+    modelEndpointEl.value = model.endpoint ?? "";
+    modelApiKeyEl.value = model.api_key ?? "";
+  }
+  modelListEl.replaceChildren();
+
+  models.forEach((model, i) => {
+    const item = document.createElement("div");
+    item.textContent = model.id;
+
+    item.addEventListener("click", () => {
+      selectedModelIndex = i;
+      loadModelIntoEditor(models[i]);
+      renderSettingsDialog();
+    });
+
+    modelListEl.appendChild(item);
+  });
+}
 async function init() {
   const storeSettings = await Store.load("settings.json");
   storeMain = await Store.load("main_front.json");
 
-  const models: ModelInfo[] = await invoke<ModelInfo[]>("get_available_models");
+  models = await invoke<ModelConfig[]>("get_available_models");
   console.log("Available models:", models);
 
-  // Populate model select options
-  for (let i = 0; i < models.length; i++) {
-    const option = document.createElement("option");
-    option.value = String(i);
-    option.textContent = models[i].display_name;
-    modelSelectEl.appendChild(option);
-  }
-  const savedModel = await storeSettings.get<string>("current_model");
-  if (savedModel) {
-    const idx = models.findIndex((x) => x.id === savedModel);
+  populateModelSelect();
 
-    if (idx >= 0) {
-      modelSelectEl.selectedIndex = idx;
+  selectedModelIndex = await storeSettings.get<number>("current_model") || -1;
+  if (selectedModelIndex >= 0) {
+    modelSelectEl.selectedIndex = selectedModelIndex;
 
-      await invoke("set_current_model", {
-        modelId: savedModel,
-      });
-    }
-  } else {
-    setCurrentModel(models[0].id); // Set initial model
+    await invoke("set_current_model", { modelConfig: models[selectedModelIndex] });
   }
 
   // load analyses
@@ -192,10 +218,9 @@ async function init() {
   }
 
   modelSelectEl.addEventListener("change", async () => {
-    const selectedModel = models[modelSelectEl.selectedIndex];
-    setCurrentModel(selectedModel.id);
-    await storeSettings.set("current_model", selectedModel.id);
-
+    selectedModelIndex = modelSelectEl.selectedIndex;
+    await invoke("set_current_model", { modelConfig: models[selectedModelIndex] });
+    await storeSettings.set("current_model", selectedModelIndex);
     await storeSettings.save();
   });
 
@@ -214,10 +239,20 @@ async function init() {
   inputEl.addEventListener("input", scheduleSateSave);
   sentenceListEl.addEventListener("input", scheduleSateSave);
 
+
+
+  settingsBtnEl.addEventListener("click", () => {
+    renderSettingsDialog();
+    settingsDialogEl.classList.remove("hidden");
+  });
+
+  settingsCloseBtnEl.addEventListener("click", () => {
+    settingsDialogEl.classList.add("hidden");
+  });
+
   clearBtnEl.addEventListener("click", () => {
     inputEl.value = "";
   });
-
   // Paste Handler: Reads text from the clipboard and sets it to the input textarea
   pasteHtmlBtnEl.addEventListener(
     "click",

@@ -9,7 +9,7 @@ use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub current_model: Arc<Mutex<ModelConfig>>,
+    pub current_model: Arc<Mutex<Option<ModelConfig>>>,
     pub llm_analysis_queue: Arc<Mutex<VecDeque<LlmJob>>>,
     pub llm_ask_queue: Arc<Mutex<VecDeque<LlmJob>>>,
     pub ask_running: Arc<AtomicBool>,
@@ -19,7 +19,7 @@ pub struct AppState {
     pub running_ai_jobs: Arc<AtomicUsize>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
     pub id: String,
     pub endpoint: String,

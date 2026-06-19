@@ -91,15 +91,15 @@ async fn process_job(app: &AppHandle, state: &AppState, job: LlmJob) {
                 // window found, continue processing
 
                 let config = { state.current_model.lock().unwrap().clone() };
+                if let Some(config) = config {
+                    let provider = OpenAiProvider {
+                        endpoint: config.endpoint,
+                        model: config.id,
+                        api_key: config.api_key,
+                    };
 
-                let provider = OpenAiProvider {
-                    endpoint: "http://localhost:1234/v1/chat/completions".into(),
-                    model: config.id,
-                    api_key: None,
-                };
-
-                let prompt = format!(
-                    r#"
+                    let prompt = format!(
+                        r#"
 Context:
 
 {}
@@ -126,71 +126,85 @@ Do not use LaTeX.
 Do not use $...$ expressions.
 Use plain text for variables such as x, y, and z.
 "#,
-                    prev_sentences.join("\n"),
-                    sentence,
-                    after_sentences.join("\n")
-                );
+                        prev_sentences.join("\n"),
+                        sentence,
+                        after_sentences.join("\n")
+                    );
 
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Prompt starts---------->\n{}\n<----------Prompt ends",
-                    prompt
-                );
+                    #[cfg(debug_assertions)]
+                    eprintln!(
+                        "Prompt starts---------->\n{}\n<----------Prompt ends",
+                        prompt
+                    );
 
-                let messages = vec![Message {
-                    role: "user".into(),
-                    content: prompt,
-                }];
+                    let messages = vec![Message {
+                        role: "user".into(),
+                        content: prompt,
+                    }];
 
-                let _ = window.emit_to(
-                    job.window_label.clone(),
-                    "analysis_progress",
-                    JobProgress {
+                    let _ = window.emit_to(
+                        job.window_label.clone(),
+                        "analysis_progress",
+                        JobProgress {
+                            index,
+                            message: "Thinking...".into(),
+                        },
+                    );
+
+                    let response = match provider.chat(messages).await {
+                        Ok(x) => x,
+
+                        Err(e) => {
+                            eprintln!("CHAT ERROR: {:?}", e);
+                            let _ = window.emit_to(
+                                job.window_label.clone(),
+                                "analysis_error",
+                                JobError {
+                                    index,
+                                    message: format!("LLM request error: {}", e),
+                                    raw_response: None,
+                                    model: provider.model,
+                                },
+                            );
+                            return;
+                        }
+                    };
+
+                    #[cfg(debug_assertions)]
+                    eprintln!(
+                        "Model={} Prompt={} Completion={} Total={}",
+                        response.model,
+                        response.prompt_tokens,
+                        response.completion_tokens,
+                        response.total_tokens,
+                    );
+
+                    let result = SentenceResult {
                         index,
-                        message: "Thinking...".into(),
-                    },
-                );
+                        original: sentence,
+                        answer: response.content,
+                        analysis_error: "".into(),
+                        model: response.model,
+                        prompt_tokens: response.prompt_tokens,
+                        completion_tokens: response.completion_tokens,
+                        total_tokens: response.total_tokens,
+                    };
 
-                let response = match provider.chat(messages).await {
-                    Ok(x) => x,
-
-                    Err(e) => {
-                        eprintln!("CHAT ERROR: {:?}", e);
-                        let _ = window.emit_to(
-                            job.window_label.clone(),
-                            "analysis_error",
-                            JobError {
-                                index,
-                                message: format!("LLM request error: {}", e),
-                                raw_response: None,
-                                model: provider.model,
-                            },
-                        );
-                        return;
-                    }
-                };
-
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Model={} Prompt={} Completion={} Total={}",
-                    response.model,
-                    response.prompt_tokens,
-                    response.completion_tokens,
-                    response.total_tokens,
-                );
-
-                let result = SentenceResult {
-                    index,
-                    original: sentence,
-                    answer: response.content,
-                    analysis_error: "".into(),
-                    model: response.model,
-                    prompt_tokens: response.prompt_tokens,
-                    completion_tokens: response.completion_tokens,
-                    total_tokens: response.total_tokens,
-                };
-
-                let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);
+                    let _ = window.emit_to(job.window_label.clone(), "sentence_ready", &result);
+                } else {
+                    // model config is None
+                    let _ = window.emit_to(
+                        job.window_label.clone(),
+                        "analysis_error",
+                        JobError {
+                            index,
+                            message: "Model config is empty".into(),
+                            raw_response: None,
+                            model: "".into(),
+                        },
+                    );
+                    return;
+                }
             } else {
                 eprintln!("window not found: {}", job.window_label);
                 return;
@@ -209,15 +223,15 @@ Use plain text for variables such as x, y, and z.
             );
             if let Some(window) = app.get_webview_window(&job.window_label) {
                 let config = { state.current_model.lock().unwrap().clone() };
+                if let Some(config) = config {
+                    let provider = OpenAiProvider {
+                        endpoint: config.endpoint,
+                        model: config.id,
+                        api_key: config.api_key,
+                    };
 
-                let provider = OpenAiProvider {
-                    endpoint: config.endpoint,
-                    model: config.id,
-                    api_key: config.api_key,
-                };
-
-                let prompt = format!(
-                    r#"You are an English reading tutor.
+                    let prompt = format!(
+                        r#"You are an English reading tutor.
 
 Sentence:
 {}
@@ -227,47 +241,61 @@ User question:
 
 Answer in Japanese.
 Explain clearly and briefly."#,
-                    sentence, question
-                );
+                        sentence, question
+                    );
 
-                let messages = vec![Message {
-                    role: "user".into(),
-                    content: prompt,
-                }];
+                    let messages = vec![Message {
+                        role: "user".into(),
+                        content: prompt,
+                    }];
 
-                let _ = window.emit_to(
-                    job.window_label.clone(),
-                    "ask_ai_progress",
-                    JobProgress {
+                    let _ = window.emit_to(
+                        job.window_label.clone(),
+                        "ask_ai_progress",
+                        JobProgress {
+                            index,
+                            message: "Thinking...".into(),
+                        },
+                    );
+
+                    let response = match provider.chat(messages).await {
+                        Ok(x) => x,
+                        Err(e) => {
+                            let _ = window.emit_to(
+                                job.window_label.clone(),
+                                "ask_ai_error",
+                                JobError {
+                                    index,
+                                    message: format!("LLM request error: {}", e),
+                                    raw_response: None,
+                                    model: provider.model,
+                                },
+                            );
+                            return;
+                        }
+                    };
+
+                    let payload = AskAiResponse {
                         index,
-                        message: "Thinking...".into(),
-                    },
-                );
-
-                let response = match provider.chat(messages).await {
-                    Ok(x) => x,
-                    Err(e) => {
-                        let _ = window.emit_to(
-                            job.window_label.clone(),
-                            "ask_ai_error",
-                            JobError {
-                                index,
-                                message: format!("LLM request error: {}", e),
-                                raw_response: None,
-                                model: provider.model,
-                            },
-                        );
-                        return;
-                    }
-                };
-
-                let payload = AskAiResponse {
-                    index,
-                    response: response.content,
-                    model: response.model,
-                    total_tokens: response.total_tokens,
-                };
-                let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
+                        response: response.content,
+                        model: response.model,
+                        total_tokens: response.total_tokens,
+                    };
+                    let _ = window.emit_to(job.window_label.clone(), "ask_ai_response", payload);
+                } else {
+                    // model config is None
+                    let _ = window.emit_to(
+                        job.window_label.clone(),
+                        "analysis_error",
+                        JobError {
+                            index,
+                            message: "Model config is empty".into(),
+                            raw_response: None,
+                            model: "".into(),
+                        },
+                    );
+                    return;
+                }
             } else {
                 eprintln!("window not found: {}", job.window_label);
                 return;

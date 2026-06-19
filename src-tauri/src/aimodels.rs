@@ -1,36 +1,37 @@
-use crate::models::ModelInfo;
-use crate::state::AppState;
+use crate::state::{AppState, ModelConfig};
 use tauri::State;
 
 #[tauri::command]
-pub async fn get_available_models() -> Result<Vec<ModelInfo>, String> {
+pub async fn get_available_models() -> Result<Vec<ModelConfig>, String> {
     Ok(vec![
-        ModelInfo {
+        ModelConfig {
             id: "qwen/qwen3-vl-4b".into(),
-            display_name: "Qwen3 VL 4B".into(),
-            provider: "Alibaba".into(),
+            endpoint: "http://localhost:1234/v1/chat/completions".into(),
+            api_key: None,
         },
-        ModelInfo {
+        ModelConfig {
             id: "openai/gpt-oss-20b".into(),
-            display_name: "GPT OSS 20B".into(),
-            provider: "OpenAI".into(),
+            endpoint: "http://localhost:1234/v1/chat/completions".into(),
+            api_key: None,
         },
-        ModelInfo {
+        ModelConfig {
             id: "google/gemma-4-26b-a4b".into(),
-            display_name: "Gemma 4 26B A4B".into(),
-            provider: "Google".into(),
+            endpoint: "http://localhost:1234/v1/chat/completions".into(),
+            api_key: None,
         },
-        ModelInfo {
+        ModelConfig {
             id: "qwen3.5-27b".into(),
-            display_name: "qwen3.5-27b".into(),
-            provider: "LM Studio Community".into(),
+            endpoint: "http://localhost:1234/v1/chat/completions".into(),
+            api_key: None,
         },
     ])
 }
 
 #[tauri::command]
-pub async fn set_current_model(state: State<'_, AppState>, model_id: String) -> Result<(), String> {
-    let mut config = state.current_model.lock().unwrap();
-    config.id = model_id;
+pub async fn set_current_model(
+    state: State<'_, AppState>,
+    model_config: ModelConfig,
+) -> Result<(), String> {
+    *state.current_model.lock().unwrap() = Some(model_config);
     Ok(())
 }

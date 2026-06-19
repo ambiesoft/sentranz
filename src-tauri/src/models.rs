@@ -13,13 +13,6 @@ pub struct SentenceResult {
     pub total_tokens: u32,
 }
 
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ModelInfo {
-    pub id: String,
-    pub display_name: String,
-    pub provider: String,
-}
-
 #[derive(Serialize, Clone)]
 pub struct AskAiResponse {
     pub index: usize,

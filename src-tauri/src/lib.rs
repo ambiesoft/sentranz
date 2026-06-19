@@ -20,11 +20,12 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
             // sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
-            current_model: Arc::new(Mutex::new(state::ModelConfig {
-                id: "".into(), //"google/gemma-4-26b-a4b".into(),
-                endpoint: "http://localhost:1234/v1/chat/completions".into(),
-                api_key: None,
-            })),
+            // current_model: Arc::new(Mutex::new(state::ModelConfig {
+            //     id: "".into(), //"google/gemma-4-26b-a4b".into(),
+            //     endpoint: "http://localhost:1234/v1/chat/completions".into(),
+            //     api_key: None,
+            // })),
+            current_model: Arc::new(Mutex::new(None)),
             llm_analysis_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             llm_ask_queue: Arc::new(Mutex::new(std::collections::VecDeque::new())),
             ask_running: Arc::new(AtomicBool::new(false)),
